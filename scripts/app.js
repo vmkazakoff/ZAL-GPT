@@ -37,6 +37,10 @@ if (userIdFromUrl) {
     localStorage.setItem('userId', userIdFromUrl);
 }
 
+// --- Global State ---
+let attempts = [];
+let currentAttemptIndex = -1;
+
 // --- Initialization Logic ---
 document.addEventListener('DOMContentLoaded', function() {
     const userId = localStorage.getItem('userId');
@@ -53,13 +57,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }            
 
     // Load task data from backend
-    loadTaskData(taskId);
+    loadTaskData(taskId, userId);
 });
 
-async function loadTaskData(id) {
+async function loadTaskData(id, userId) {
     showLoading();
     try {
-        const response = await fetch(`${BACKEND_URL}?action=getPractice&practice=${encodeURIComponent(id)}`);
+        const response = await fetch(`${BACKEND_URL}?action=getPractice&practice=${encodeURIComponent(id)}&user=${encodeURIComponent(userId)}`);
         const data = await response.json();
 
         if (response.ok && data.success) {
@@ -68,6 +72,27 @@ async function loadTaskData(id) {
             document.getElementById('taskDescription').innerHTML = data.task.description;
             document.getElementById('userSection').classList.remove('hidden');
             document.getElementById('taskIdDisplay').textContent = taskId;
+
+            attempts = data.completions || [];
+            window.totalAllowedAttempts = data.task.allowedAttempts; // Store globally for easy access
+
+            initAttemptsNavigation(); // Initialize navigation visibility and button handlers
+
+            if (attempts.length > 0) {
+                currentAttemptIndex = attempts.length - 1;
+                displayAttempt(currentAttemptIndex);
+            } else {
+                currentAttemptIndex = -1; // No previous attempts
+                document.getElementById('promptInput').value = '';
+                document.getElementById('aiResponseSection').classList.add('hidden'); // Hide AI response
+                document.getElementById('feedbackPlaceholder').classList.remove('hidden'); // Show feedback placeholder
+                document.getElementById('feedbackContent').classList.add('hidden'); // Hide feedback content
+                document.getElementById('currentAttemptDisplay').textContent = 1;
+                document.getElementById('totalAttemptsDisplay').textContent = window.totalAllowedAttempts;
+                document.getElementById('attemptsNav').classList.remove('hidden'); // Always show nav
+                updateSubmitButtonState(); // Update submit button for a fresh start
+            }
+
         } else {
             document.getElementById('errorSection').classList.remove('hidden');
             document.getElementById('errorDetails').textContent = data.error || 'Неизвестная ошибка при загрузке задания.';
@@ -78,6 +103,112 @@ async function loadTaskData(id) {
         document.getElementById('errorDetails').textContent = 'Ошибка сети при загрузке задания.';
     } finally {
         hideLoading();
+    }
+}
+
+function initAttemptsNavigation() {
+    const attemptsNav = document.getElementById('attemptsNav');
+    const prevBtn = document.getElementById('prevAttemptBtn');
+    const nextBtn = document.getElementById('nextAttemptBtn');
+    const totalAttemptsDisplay = document.getElementById('totalAttemptsDisplay');
+
+    attemptsNav.classList.remove('hidden'); // Always show nav
+    totalAttemptsDisplay.textContent = window.totalAllowedAttempts;
+
+    prevBtn.onclick = () => {
+        if (currentAttemptIndex > 0) {
+            currentAttemptIndex--;
+            displayAttempt(currentAttemptIndex);
+        }
+    };
+
+    nextBtn.onclick = () => {
+        if (currentAttemptIndex < attempts.length - 1) {
+            currentAttemptIndex++;
+            displayAttempt(currentAttemptIndex);
+        } else if (currentAttemptIndex === attempts.length - 1 && attempts.length < window.totalAllowedAttempts) {
+            // User is on the last attempt and clicks 'next' to start a new one
+            currentAttemptIndex++; // Move to a conceptual 'new attempt' state
+            displayNewAttemptState(currentAttemptIndex);
+        }
+    };
+}
+
+function displayAttempt(index) {
+    const attempt = attempts[index];
+    const promptInput = document.getElementById('promptInput');
+    const currentAttemptDisplay = document.getElementById('currentAttemptDisplay');
+    const prevBtn = document.getElementById('prevAttemptBtn');
+    const nextBtn = document.getElementById('nextAttemptBtn');
+
+    promptInput.value = attempt.user_prompt;
+    displayFeedback(attempt.feedback, false); // Pass false to ensure no animation
+
+    currentAttemptDisplay.textContent = index + 1;
+    document.getElementById('totalAttemptsDisplay').textContent = window.totalAllowedAttempts;
+
+    prevBtn.disabled = index === 0;
+    nextBtn.disabled = (index === attempts.length - 1 && attempts.length >= window.totalAllowedAttempts);
+    
+    document.getElementById('aiResponseSection').classList.remove('hidden');
+    updateSubmitButtonState(); // Call the new function to manage button state
+}
+
+function displayNewAttemptState(index) {
+    const promptInput = document.getElementById('promptInput');
+    const currentAttemptDisplay = document.getElementById('currentAttemptDisplay');
+    const prevBtn = document.getElementById('prevAttemptBtn');
+    const nextBtn = document.getElementById('nextAttemptBtn');
+
+    promptInput.value = '';
+    document.getElementById('aiResponseSection').classList.add('hidden'); // Hide AI response
+    document.getElementById('feedbackPlaceholder').classList.remove('hidden'); // Show feedback placeholder
+    document.getElementById('feedbackContent').classList.add('hidden'); // Hide feedback content
+
+    prevBtn.disabled = index === 0;
+    nextBtn.disabled = 1;
+
+    currentAttemptDisplay.textContent = attempts.length + 1;
+    updateSubmitButtonState();
+}
+
+function updateSubmitButtonState() {
+    const submitBtn = document.getElementById('submitBtn');
+    const promptInput = document.getElementById('promptInput');
+    
+    // Determine if the user is viewing a past attempt or is in a state to submit a new one.
+    // The latter is true if they are on the last attempt and click "next" or if there are no attempts.
+    const isViewingPastAttempt = currentAttemptIndex < attempts.length;
+    const hasAttemptsLeft = attempts.length < window.totalAllowedAttempts;
+
+    if (isViewingPastAttempt && currentAttemptIndex !== -1) {
+        // Always disable if viewing a historical attempt.
+        submitBtn.disabled = true;
+        promptInput.disabled = true;
+    } else {
+        // This is a new attempt. Enable/disable based on whether attempts are left.
+        if (hasAttemptsLeft) {
+            submitBtn.disabled = false;
+            promptInput.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+            promptInput.disabled = true;
+        }
+    }
+
+    // Update button text and style based on the final state
+    if (submitBtn.disabled) {
+        if (!hasAttemptsLeft) {
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Попытки закончились';
+        } else {
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Отправить промпт';
+        }
+        submitBtn.classList.add('bg-gray-400', 'hover:bg-gray-400', 'cursor-not-allowed');
+        submitBtn.classList.remove('bg-red-700', 'hover:bg-red-800');
+    } else {
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Отправить промпт';
+        submitBtn.classList.remove('bg-gray-400', 'hover:bg-gray-400', 'cursor-not-allowed');
+        submitBtn.classList.add('bg-red-700', 'hover:bg-red-800');
     }
 }
 
@@ -93,17 +224,13 @@ async function submitPrompt() {
         return;
     }
 
-    // Disable button and show loading
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mx-auto"></div>';
-    //showLoading();
 
     try {
         const response = await fetch(BACKEND_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
                 action: 'submitPrompt',
                 taskId: taskId,
@@ -115,27 +242,32 @@ async function submitPrompt() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            displayFeedback(data.feedback);
-            // Show AI response section
+            // New logic: Directly display feedback with animation
             document.getElementById('aiResponseSection').classList.remove('hidden');
-            // Scroll to AI response
+            displayFeedback(data.feedback, true); // Pass true to trigger animation
+
+            // Silently update the state in the background
+            const newAttempt = { user_prompt: prompt, feedback: data.feedback };
+            attempts.push(newAttempt);
+            currentAttemptIndex = attempts.length - 1;
+            
+            initAttemptsNavigation(); // Re-initialize to update counters and buttons
+            updateSubmitButtonState(); // Update the button state after submission
+
             document.getElementById('aiResponseSection').scrollIntoView({ behavior: 'smooth' });
+
         } else {
             alert('Ошибка при отправке промпта: ' + (data.error || 'Неизвестная ошибка'));
+            updateSubmitButtonState(); // Re-enable button on error
         }
     } catch (error) {
         console.error('Network error:', error);
         alert('Ошибка сети при отправке промпта.');
-    } finally {
-        // Re-enable button and restore text
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Отправить промпт';
-        //hideLoading();
+        updateSubmitButtonState(); // Re-enable button on error
     }
 }
 
-async function displayFeedback(data) {
-    // Отображаем AI response, комментарий и скрываем заглушку — как раньше
+function displayFeedback(data, animate = false) {
     const responseEl = document.getElementById('aiResponseDisplay');
     if (responseEl) {
         responseEl.classList.add('markdown-content');
@@ -147,19 +279,17 @@ async function displayFeedback(data) {
         commentEl.innerHTML = `<p class="text-gray-700">${data.ai_comment || '—'}</p>`;
     }
 
-    // Скрываем placeholder, показываем контент
     document.getElementById('feedbackPlaceholder')?.classList.add('hidden');
     document.getElementById('feedbackContent')?.classList.remove('hidden');
 
-    // Конфиг критериев
     const criteriaConfig = {
-        role:        { title: 'Роль и контекст',         icon: 'fa-user-circle' },
-        clarity:     { title: 'Чёткость задачи',         icon: 'fa-tasks' },
-        completeness:{ title: 'Полнота данных',          icon: 'fa-database' },
-        focus:       { title: 'Сфокусированность',       icon: 'fa-bullseye' },
-        structure:   { title: 'Структура',               icon: 'fa-sitemap' },
-        method:      { title: 'Метод решения',           icon: 'fa-cogs' },
-        format:      { title: 'Формат ответа',           icon: 'fa-file-alt' }
+        role: { title: 'Роль и контекст', icon: 'fa-user-circle' },
+        clarity: { title: 'Чёткость задачи', icon: 'fa-tasks' },
+        completeness: { title: 'Полнота данных', icon: 'fa-database' },
+        focus: { title: 'Сфокусированность', icon: 'fa-bullseye' },
+        structure: { title: 'Структура', icon: 'fa-sitemap' },
+        method: { title: 'Метод решения', icon: 'fa-cogs' },
+        format: { title: 'Формат ответа', icon: 'fa-file-alt' }
     };
 
     const container = document.getElementById('aiFeedbackDisplay');
@@ -169,71 +299,67 @@ async function displayFeedback(data) {
 
     if (!container || !template) return;
 
-    // Очищаем старые критерии
-    container.querySelectorAll('.criterion-item').forEach(el => el.remove());
-
-    // Параметры анимации
-    const delayBetweenCriteria = 600;  // между критериями
-    const delayBetweenStars = 100;     // между звёздами в одном критерии
+    container.innerHTML = '';
+    finalGradeSection.classList.add('hidden');
+    finalGradeSection.classList.remove('is-visible');
 
     const criteriaKeys = Object.keys(criteriaConfig);
     const aiCriteria = data.ai_criteria || {};
+    const newCriteriaElements = [];
 
-    // 1. Последовательно отображаем критерии
-    for (const key of criteriaKeys) {
+    criteriaKeys.forEach(key => {
         const config = criteriaConfig[key];
         const score = aiCriteria[key]?.score ?? 0;
         const comment = aiCriteria[key]?.comment ?? 'Нет комментария';
-
         const item = template.content.firstElementChild.cloneNode(true);
 
-        // Иконка и заголовок
-        const iconEl = item.querySelector('.criterion-icon');
-        iconEl.classList.add(config.icon);
+        item.querySelector('.criterion-icon').classList.add(config.icon);
         item.querySelector('.criterion-title').textContent = config.title;
-
-        // Создаём 5 пустых звёзд
-        const starsContainer = item.querySelector('.criterion-stars');
-        starsContainer.innerHTML = '';
-        for (let i = 0; i < 5; i++) {
-            const star = document.createElement('i');
-            star.className = 'far fa-star text-gray-300';
-            starsContainer.appendChild(star);
-        }
-
-        // Комментарий
         item.querySelector('.criterion-comment').textContent = comment;
 
-        // Добавляем карточку (видна сразу, но звёзды пока серые)
-        container.appendChild(item);
-
-        // Небольшая пауза перед заполнением звёзд
-        await new Promise(r => setTimeout(r, 100));
-
-        // Заполняем звёзды по одной
-        const stars = Array.from(starsContainer.children);
+        const starsContainer = item.querySelector('.criterion-stars');
         const full = Math.floor(score);
         const hasHalf = (score - full) >= 0.5;
 
-        for (let i = 0; i < full; i++) {
-            await new Promise(r => setTimeout(r, delayBetweenStars));
-            stars[i].className = 'fas fa-star text-yellow-500';
+        for (let i = 0; i < 5; i++) {
+            const star = document.createElement('i');
+            if (i < full) star.className = 'fas fa-star text-yellow-500';
+            else if (i === full && hasHalf) star.className = 'fas fa-star-half-alt text-yellow-500';
+            else star.className = 'far fa-star text-gray-300';
+            starsContainer.appendChild(star);
         }
 
-        if (hasHalf) {
-            await new Promise(r => setTimeout(r, delayBetweenStars));
-            stars[full].className = 'fas fa-star-half-alt text-yellow-500';
-        }
-
-        // Пауза перед следующим критерием
-        await new Promise(r => setTimeout(r, delayBetweenCriteria));
-    }
-
-    // 2. После всех критериев — показываем итоговую оценку
+        container.appendChild(item);
+        newCriteriaElements.push(item);
+    });
+    
     if (finalGradeSection && finalGradeDisplay) {
         finalGradeDisplay.textContent = (data.ai_grade || 0).toFixed(1);
-        await new Promise(r => setTimeout(r, 400));
-        finalGradeSection.classList.remove('hidden');
+    }
+
+    if (animate) {
+        // Use requestAnimationFrame to ensure the initial state is rendered before animating
+        requestAnimationFrame(() => {
+            newCriteriaElements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.classList.add('is-visible');
+                }, index * 100);
+            });
+            if (finalGradeSection) {
+                setTimeout(() => {
+                    finalGradeSection.classList.remove('hidden');
+                    // A tiny delay after making it visible to ensure transition triggers
+                    requestAnimationFrame(() => finalGradeSection.classList.add('is-visible'));
+                }, newCriteriaElements.length * 100);
+            }
+        });
+    } else {
+        // No animation, just show everything instantly
+        newCriteriaElements.forEach(el => el.classList.add('is-visible'));
+        if (finalGradeSection) {
+            finalGradeSection.classList.remove('hidden');
+            finalGradeSection.classList.add('is-visible');
+        }
     }
 }
 
@@ -343,25 +469,64 @@ function copyQRLink() {
 let qrCodeInstance = null;
 
 function showQRCode() {
-    const userId = localStorage.getItem('userId');
-    const link = `${window.location.origin}${window.location.pathname}?practice=${taskId}&user=${userId}`;
+    document.getElementById('qrModal').classList.remove('hidden');
+    // Initialize with the general view by default
+    switchQRMode('general');
+}
+
+function switchQRMode(mode) {
+    const tabGeneral = document.getElementById('tabGeneral');
+    const tabPersonal = document.getElementById('tabPersonal');
+    const qrDescription = document.getElementById('qrDescription');
+    const linkSection = document.getElementById('linkSection');
+    const copyButton = document.getElementById('copyButton');
+    
+    let link = '';
+
+    if (mode === 'personal') {
+        // Style for Personal Tab
+        tabPersonal.classList.add('border-red-600', 'text-red-600');
+        tabPersonal.classList.remove('border-transparent', 'hover:text-gray-600');
+        tabGeneral.classList.add('border-transparent', 'hover:text-gray-600');
+        tabGeneral.classList.remove('border-red-600', 'text-red-600');
+        
+        // Content for Personal QR
+        const userId = localStorage.getItem('userId');
+        link = `${window.location.origin}${window.location.pathname}?practice=${taskId}&user=${userId}`;
+        qrDescription.textContent = 'Персональный QR-код для продолжения на другом устройстве';
+        linkSection.classList.remove('hidden');
+        copyButton.classList.remove('hidden');
+        
+    } else { // 'general'
+        // Style for General Tab
+        tabGeneral.classList.add('border-red-600', 'text-red-600');
+        tabGeneral.classList.remove('border-transparent', 'hover:text-gray-600');
+        tabPersonal.classList.add('border-transparent', 'hover:text-gray-600');
+        tabPersonal.classList.remove('border-red-600', 'text-red-600');
+
+        // Content for General QR
+        link = `${window.location.origin}${window.location.pathname}?practice=${taskId}`;
+        qrDescription.textContent = 'Отсканируйте QR-код, чтобы открыть задание на другом устройстве';
+        linkSection.classList.add('hidden');
+        copyButton.classList.add('hidden');
+    }
+
     document.getElementById('qrLinkDisplay').textContent = link;
 
-    // Clear previous QR code if exists
+    // Generate QR Code
     if (qrCodeInstance) {
         qrCodeInstance.clear();
         qrCodeInstance.makeCode(link);
     } else {
         qrCodeInstance = new QRCode(document.getElementById("qrcode"), {
             text: link,
-            width: 500,
-            height: 500,
+            width: 512,
+            height: 512,
             colorDark: "#000000",
-            colorLight: "#f1f5f9",
+            colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
     }
-    document.getElementById('qrModal').classList.remove('hidden');
 }
 
 function closeQRModal() {
