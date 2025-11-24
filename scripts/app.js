@@ -90,6 +90,8 @@ async function loadTaskData(id, userId) {
                 document.getElementById('currentAttemptDisplay').textContent = 1;
                 document.getElementById('totalAttemptsDisplay').textContent = window.totalAllowedAttempts;
                 document.getElementById('attemptsNav').classList.remove('hidden'); // Always show nav
+                document.getElementById('prevAttemptBtn').setAttribute("disabled","disabled");
+                document.getElementById('nextAttemptBtn').setAttribute("disabled","disabled");
                 updateSubmitButtonState(); // Update submit button for a fresh start
             }
 
@@ -114,6 +116,9 @@ function initAttemptsNavigation() {
 
     attemptsNav.classList.remove('hidden'); // Always show nav
     totalAttemptsDisplay.textContent = window.totalAllowedAttempts;
+
+    prevBtn.disabled = currentAttemptIndex === 0;
+    nextBtn.disabled = (currentAttemptIndex === attempts.length - 1 && attempts.length >= window.totalAllowedAttempts);
 
     prevBtn.onclick = () => {
         if (currentAttemptIndex > 0) {
