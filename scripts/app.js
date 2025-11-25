@@ -114,7 +114,6 @@ function initAttemptsNavigation() {
     const nextBtn = document.getElementById('nextAttemptBtn');
     const totalAttemptsDisplay = document.getElementById('totalAttemptsDisplay');
 
-    attemptsNav.classList.remove('hidden'); // Always show nav
     totalAttemptsDisplay.textContent = window.totalAllowedAttempts;
 
     prevBtn.disabled = currentAttemptIndex === 0;
@@ -179,6 +178,7 @@ function displayNewAttemptState(index) {
 
 function updateSubmitButtonState() {
     const submitBtn = document.getElementById('submitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
     const promptInput = document.getElementById('promptInput');
     
     // Determine if the user is viewing a past attempt or is in a state to submit a new one.
@@ -203,15 +203,11 @@ function updateSubmitButtonState() {
 
     // Update button text and style based on the final state
     if (submitBtn.disabled) {
-        if (!hasAttemptsLeft) {
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Попытки закончились';
-        } else {
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Отправить промпт';
-        }
+        submitBtnText.innerHTML = 'Попытка';
         submitBtn.classList.add('bg-gray-400', 'hover:bg-gray-400', 'cursor-not-allowed');
         submitBtn.classList.remove('bg-red-700', 'hover:bg-red-800');
     } else {
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Отправить промпт';
+        submitBtnText.innerHTML = 'Отправить ответ';
         submitBtn.classList.remove('bg-gray-400', 'hover:bg-gray-400', 'cursor-not-allowed');
         submitBtn.classList.add('bg-red-700', 'hover:bg-red-800');
     }
