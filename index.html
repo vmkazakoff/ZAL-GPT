@@ -78,19 +78,19 @@
                             </div>
 
                             <!-- Submit Button -->
-                            <div class="flex items-center justify-between pt-4">
-                              <button id="prevAttemptBtn" class="p-2 py-4 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <div class="flex items-center justify-between gap-2 pt-4">
+                              <button id="prevAttemptBtn" class="py-3 px-6 rounded-lg w-1/4 hover:bg-gray-100 disabled:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed">
                                   <i class="fas fa-chevron-left text-lg"></i>
                               </button>
                               <button 
                                   id="submitBtn"
                                   onclick="submitPrompt()"
-                                  class="w-full bg-red-700 hover:bg-red-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                                  class="bg-red-700 hover:bg-red-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:text-gray-700 disabled:bg-white disabled:hover:bg-white w-1/2 disabled:cursor-default"
                               >
                                   <!--<i class="fas fa-paper-plane mr-2"></i>-->
-                                  <span id="submitBtnText">Отправить ответ</span> <span class="text-sm font-small font-mono opacity-50">(<span id="currentAttemptDisplay">-</span>/<span id="totalAttemptsDisplay">-</span>)</span>
+                                  <span id="submitBtnText">Ответить</span> <span class="font-mono"><span id="currentAttemptDisplay">-</span>/<span id="totalAttemptsDisplay">-</span></span>
                               </button>
-                              <button id="nextAttemptBtn" class="p-2 py-4 disabled:opacity-50 disabled:cursor-not-allowed">
+                              <button id="nextAttemptBtn" class="py-3 px-6 rounded-lg text-white w-1/4 bg-red-700 hover:bg-red-800 disabled:bg-white disabled:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed disabled:text-black ransition-all duration-300">
                                   <i class="fas fa-chevron-right text-lg"></i>
                               </button>
                             </div>
@@ -132,8 +132,7 @@
                             </div>
 
                             <!-- AI Feedback by Criterias-->
-                            <div id="aiFeedbackDisplay" class="space-y-4">
-
+                            <div id="aiFeedbackDisplay" class="space-y-4"></div>
                             <template id="criterionTemplate">
                               <div class="criterion-item text-gray-600 hover:text-black hover:bg-gray-50 hover:shadow-lg cursor-default transition-all duration-200 p-4 mb-2 border rounded-lg">
                                 <div class="flex gap-4 items-start">
@@ -148,8 +147,6 @@
                                 <p class="text-sm pt-2 criterion-comment">Комментарий...</p>
                               </div>
                             </template>
-
-                        </div>
 
                         <!-- Grade -->
                         <div id="finalGradeSection" class="mt-6 pt-4 border-t border-gray-200 text-2xl font-bold text-gray-800 mb-4 flex justify-between hidden">
