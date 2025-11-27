@@ -145,7 +145,7 @@ function displayAttempt(index) {
     const nextBtn = document.getElementById('nextAttemptBtn');
 
     promptInput.value = attempt.user_prompt;
-    displayFeedback(attempt.feedback, false); // Pass false to ensure no animation
+    displayFeedback(attempt.feedback);
 
     currentAttemptDisplay.textContent = index + 1;
     document.getElementById('totalAttemptsDisplay').textContent = window.totalAllowedAttempts;
@@ -203,12 +203,8 @@ function updateSubmitButtonState() {
     // Update button text and style based on the final state
     if (submitBtn.disabled) {
         submitBtnText.innerHTML = 'Попытка';
-        submitBtn.classList.add('bg-gray-400', 'hover:bg-gray-400', 'cursor-not-allowed');
-        submitBtn.classList.remove('bg-red-700', 'hover:bg-red-800');
     } else {
-        submitBtnText.innerHTML = 'Отправить ответ';
-        submitBtn.classList.remove('bg-gray-400', 'hover:bg-gray-400', 'cursor-not-allowed');
-        submitBtn.classList.add('bg-red-700', 'hover:bg-red-800');
+        submitBtnText.innerHTML = 'Ответить';
     }
 }
 
@@ -217,6 +213,7 @@ async function submitPrompt() {
     const promptInput = document.getElementById('promptInput');
     const prompt = promptInput.value.trim();
     const submitBtn = document.getElementById('submitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
     const userId = localStorage.getItem('userId');
 
     if (!prompt) {
@@ -225,7 +222,7 @@ async function submitPrompt() {
     }
 
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mx-auto"></div>';
+    submitBtnText.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600 mx-auto"></div>';
 
     try {
         const response = await fetch(BACKEND_URL, {
@@ -244,7 +241,7 @@ async function submitPrompt() {
         if (response.ok && data.success) {
             // New logic: Directly display feedback with animation
             document.getElementById('aiResponseSection').classList.remove('hidden');
-            displayFeedback(data.feedback, true); // Pass true to trigger animation
+            displayFeedback(data.feedback);
 
             // Silently update the state in the background
             const newAttempt = { user_prompt: prompt, feedback: data.feedback };
@@ -267,7 +264,7 @@ async function submitPrompt() {
     }
 }
 
-function displayFeedback(data, animate = false) {
+function displayFeedback(data) {
     const responseEl = document.getElementById('aiResponseDisplay');
     if (responseEl) {
         responseEl.classList.add('markdown-content');
@@ -279,9 +276,11 @@ function displayFeedback(data, animate = false) {
         commentEl.innerHTML = `<p class="text-gray-700">${data.ai_comment || '—'}</p>`;
     }
 
+    // Показываем секцию обратной связи
     document.getElementById('feedbackPlaceholder')?.classList.add('hidden');
     document.getElementById('feedbackContent')?.classList.remove('hidden');
 
+    // Конфиг критериев
     const criteriaConfig = {
         role: { title: 'Роль и контекст', icon: 'fa-user-circle' },
         clarity: { title: 'Чёткость задачи', icon: 'fa-tasks' },
@@ -299,13 +298,11 @@ function displayFeedback(data, animate = false) {
 
     if (!container || !template) return;
 
+    // ✅ Очищаем контейнер перед добавлением новых элементов
     container.innerHTML = '';
-    finalGradeSection.classList.add('hidden');
-    finalGradeSection.classList.remove('is-visible');
 
-    const criteriaKeys = Object.keys(criteriaConfig);
     const aiCriteria = data.ai_criteria || {};
-    const newCriteriaElements = [];
+    const criteriaKeys = Object.keys(criteriaConfig);
 
     criteriaKeys.forEach(key => {
         const config = criteriaConfig[key];
@@ -323,43 +320,23 @@ function displayFeedback(data, animate = false) {
 
         for (let i = 0; i < 5; i++) {
             const star = document.createElement('i');
-            if (i < full) star.className = 'fas fa-star text-yellow-500';
-            else if (i === full && hasHalf) star.className = 'fas fa-star-half-alt text-yellow-500';
-            else star.className = 'far fa-star text-gray-300';
+            if (i < full) {
+                star.className = 'fas fa-star text-yellow-500';
+            } else if (i === full && hasHalf) {
+                star.className = 'fas fa-star-half-alt text-yellow-500';
+            } else {
+                star.className = 'far fa-star text-gray-300';
+            }
             starsContainer.appendChild(star);
         }
 
         container.appendChild(item);
-        newCriteriaElements.push(item);
     });
-    
+
+    // Обновляем итоговую оценку
     if (finalGradeSection && finalGradeDisplay) {
         finalGradeDisplay.textContent = (data.ai_grade || 0).toFixed(1);
-    }
-
-    if (animate) {
-        // Use requestAnimationFrame to ensure the initial state is rendered before animating
-        requestAnimationFrame(() => {
-            newCriteriaElements.forEach((el, index) => {
-                setTimeout(() => {
-                    el.classList.add('is-visible');
-                }, index * 100);
-            });
-            if (finalGradeSection) {
-                setTimeout(() => {
-                    finalGradeSection.classList.remove('hidden');
-                    // A tiny delay after making it visible to ensure transition triggers
-                    requestAnimationFrame(() => finalGradeSection.classList.add('is-visible'));
-                }, newCriteriaElements.length * 100);
-            }
-        });
-    } else {
-        // No animation, just show everything instantly
-        newCriteriaElements.forEach(el => el.classList.add('is-visible'));
-        if (finalGradeSection) {
-            finalGradeSection.classList.remove('hidden');
-            finalGradeSection.classList.add('is-visible');
-        }
+        finalGradeSection.classList.remove('hidden');
     }
 }
 
