@@ -1,6 +1,16 @@
 // --- Constants ---
 const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzJEnhim0Ek2UsYZxxSy5cLhHiI91uoRo4SgOLiuMSMoPzhq5aRO5E15OeBg9cwP9qDeg/exec';
 
+// --- URL Parameter Handling ---
+const urlParams = new URLSearchParams(window.location.search);
+const taskId = urlParams.get('practice'); // Changed from 'task' to 'practice' as per description
+const userIdFromUrl = urlParams.get('user');
+
+// Use user ID from URL if provided
+if (userIdFromUrl) {
+    localStorage.setItem('userId', userIdFromUrl);
+}
+
 // --- User Session Management ---
 function generateUserId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789';
@@ -27,16 +37,6 @@ if (!localStorage.getItem('userInfo')) {
     }));
 }
 
-// --- URL Parameter Handling ---
-const urlParams = new URLSearchParams(window.location.search);
-const taskId = urlParams.get('practice'); // Changed from 'task' to 'practice' as per description
-const userIdFromUrl = urlParams.get('user');
-
-// Use user ID from URL if provided
-if (userIdFromUrl) {
-    localStorage.setItem('userId', userIdFromUrl);
-}
-
 // --- Global State ---
 let attempts = [];
 let currentAttemptIndex = -1;
@@ -45,10 +45,6 @@ let currentAttemptIndex = -1;
 document.addEventListener('DOMContentLoaded', function() {
     const userId = localStorage.getItem('userId');
     const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-
-    // Display user name or ID
-    const displayName = userInfo.name || userId;
-    document.getElementById('userIdDisplay').textContent = displayName;
 
     // Check for task ID
     if (!taskId) {
@@ -67,11 +63,14 @@ async function loadTaskData(id, userId) {
         const data = await response.json();
 
         if (response.ok && data.success) {
+
+            if (data.userInfo) {
+                localStorage.setItem('userInfo', JSON.stringify(data.userInfo));
+                
+            }
             document.getElementById('taskSection').classList.remove('hidden');
             document.getElementById('taskTitle').textContent = data.task.title;
             document.getElementById('taskDescription').innerHTML = data.task.description;
-            document.getElementById('userSection').classList.remove('hidden');
-            document.getElementById('taskIdDisplay').textContent = taskId;
 
             attempts = data.completions || [];
             window.totalAllowedAttempts = data.task.allowedAttempts; // Store globally for easy access
@@ -251,8 +250,6 @@ async function submitPrompt() {
             initAttemptsNavigation(); // Re-initialize to update counters and buttons
             updateSubmitButtonState(); // Update the button state after submission
 
-            document.getElementById('aiResponseSection').scrollIntoView({ behavior: 'smooth' });
-
         } else {
             alert('Ошибка при отправке промпта: ' + (data.error || 'Неизвестная ошибка'));
             updateSubmitButtonState(); // Re-enable button on error
@@ -347,7 +344,6 @@ function showAuthModal() {
     document.getElementById('inputOrg').value = userInfo.company;
     document.getElementById('inputEmail').value = userInfo.email;
     document.getElementById('inputPhone').value = userInfo.phone;
-    document.getElementById('inputUserId').value = localStorage.getItem('userId'); // Show current ID
     document.getElementById('authModal').classList.remove('hidden');
 }
 
@@ -369,15 +365,6 @@ async function saveUserInfo() {
 
     // Update display immediately with new name or existing ID
     const userId = localStorage.getItem('userId');
-    const displayName = userInfo.name || userId;
-    document.getElementById('userIdDisplay').textContent = displayName;
-
-    // Optionally update the user ID if the user entered a different one
-    const newUserId = document.getElementById('inputUserId').value.trim();
-    if (newUserId && newUserId !== userId) {
-        localStorage.setItem('userId', newUserId);
-        document.getElementById('userIdDisplay').textContent = userInfo.name || newUserId;
-    }
 
     // Disable button and show loading
     submitBtn.disabled = true;
@@ -421,24 +408,19 @@ async function saveUserInfo() {
     }
 }
 
-// --- Clipboard and Notifications ---
-function showNotification(message) {
-    const notification = document.getElementById('notification');
-    notification.textContent = message;
-    notification.classList.add('opacity-100');
-    setTimeout(() => {
-        notification.classList.remove('opacity-100');
-    }, 2000);
-}
-
 function copyQRLink() {
     const userId = localStorage.getItem('userId');
+    const copyButton = document.getElementById('copyButton');
     const link = `${window.location.origin}${window.location.pathname}?practice=${taskId}&user=${userId}`;
     navigator.clipboard.writeText(link).then(() => {
-        showNotification('Ссылка скопирована!');
-    }).catch(err => {
-        console.error('Ошибка копирования: ', err);
-        showNotification('Ошибка копирования');
+        copyButton.innerHTML='Скопировано!';
+        copyButton.classList.add('bg-emerald-500');
+        copyButton.classList.remove('bg-red-700', 'hover:bg-red-800');
+        setTimeout(() => {
+            copyButton.innerHTML='<i class="fas fa-copy mr-2"></i> Копировать ссылку';
+            copyButton.classList.remove('bg-emerald-500');
+            copyButton.classList.add('bg-red-700', 'hover:bg-red-800');
+        }, 2000);
     });
 }
 
