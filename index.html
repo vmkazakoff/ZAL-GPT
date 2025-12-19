@@ -111,7 +111,7 @@
                             </h3>
                         </div>
                         <div id="responseContent" class="collapsible-content expanded">
-                            <div id="aiResponseDisplay" class="bg-gray-50 p-4 mt-4 rounded-sm border-l-4 border-blue-500">
+                            <div id="aiResponseDisplay" class="mt-4 rounded-lg">
                                 <p class="text-gray-700">Загрузка ответа ИИ...</p>
                             </div>
                         </div>
@@ -121,63 +121,56 @@
                 <!-- Right Column: Feedback -->
                 <div class="flex flex-col">
                     <div id="feedbackSection" class="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-200 h-full">
-                        <h3 class="text-2xl font-bold text-gray-800 mb-4">
-                            Обратная связь
-                        </h3>
-                        <div id="feedbackPlaceholder" class="text-center py-12 text-gray-500">
+
+                        <div id="feedbackPlaceholder" class="text-center py-24 text-gray-500">
                             <i class="fas fa-comment-alt text-4xl mb-4"></i>
                             <p>Отправьте промпт, чтобы получить обратную связь</p>
                         </div>
+
                         <div id="feedbackContent" class="hidden">
+
+                            <div id="finalGradeSection" class="mb-4 relative rounded-lg overflow-hidden hidden border-b-2 border-red-500">
+
+                                  <div class="mb-20">
+                                    <div class="pb-4 text-2xl font-bold flex justify-between">
+                                      <span>Общая оценка: </span>
+                                      <span>
+                                        <span class="pl-1 text-3xl font-bolder leading-tight">
+                                            <span id="finalGradeDisplay">0.0</span>
+                                        </span>
+                                        <span id="gradeDiffDisplay" class="text-xs text-green-500 leading-tight"></span>
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div class="absolute w-full h-3/5 bottom-0 z-10 shadow-lg">
+                                    <canvas id="chart" height="100"></canvas>
+                                  </div>
+
+                                  <div class="absolute w-full bottom-0 flex justify-between text-red-600 z-20 text-sm">
+                                    <i class="fas criterion-icon p-2 fa-user-circle"></i>
+                                    <i class="fas criterion-icon p-2 fa-tasks"></i>
+                                    <i class="fas criterion-icon p-2 fa-database"></i>
+                                    <i class="fas criterion-icon p-2 fa-bullseye"></i>
+                                    <i class="fas criterion-icon p-2 fa-sitemap"></i>
+                                    <i class="fas criterion-icon p-2 fa-cogs"></i>
+                                    <i class="fas criterion-icon p-2 fa-file-alt"></i>
+                                  </div>
+
+                            </div>
+
 
                             <!-- AI Feedback Comment -->
                             <div class="mb-6">
-                                <div id="aiCommentDisplay" class="bg-gray-50 p-4 mb-4 rounded-sm border-l-4 border-blue-500">
+                                <div id="aiCommentDisplay" class="bg-gray-100 p-4 mb-4 border-b-2 border-grey-500 rounded-lg">
                                     <p class="text-gray-700">Загрузка ответа ИИ...</p>
                                 </div>
                             </div>
 
-                            <!-- Grade -->
-                            <div class="mt-4 p-4 border-t text-2xl font-bold text-grey-700 flex justify-between hidden">
-                                <h2>Общая оценка: </h2>
-                                <span id="" class="text-3xl font-bold text-blue-700">0.0</span>
-                            </div>
-
-    <div id="finalGradeSection" class="my-4 relative overflow-hidden shadow-lg border rounded-lg hidden">
-
-          <div class="p-2 mb-20">
-            <div class="p-4 text-2xl font-bold flex justify-between">
-              <span>Общая оценка: </span>
-              <span>
-                <span id="finalGradeDisplay" class="text-3xl font-semibold leading-tight">0.0</span>
-                <span class="text-xs text-green-500 leading-tight">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg> 0.3</span>
-              </span>
-            </div>
-          </div>
-
-          <div class="absolute w-full h-3/4 bottom-0 z-10">
-            <canvas id="chart" height="100"></canvas>
-          </div>
-
-          <div class="absolute w-full bottom-0 flex justify-between text-red-600 z-20 text-xl cursor-pointer">
-            <i class="fas criterion-icon text-center border-b-2 border-red-50 w-full p-2 hover:border-red-700 hover:text-red-700 fa-user-circle"></i>
-            <i class="fas criterion-icon text-center border-b-2 border-red-50 w-full p-2 hover:border-red-700 hover:text-red-700 fa-tasks"></i>
-            <i class="fas criterion-icon text-center border-b-2 border-red-50 w-full p-2 hover:border-red-700 hover:text-red-700 fa-database"></i>
-            <i class="fas criterion-icon text-center border-b-2 border-red-50 w-full p-2 hover:border-red-700 hover:text-red-700 fa-bullseye"></i>
-            <i class="fas criterion-icon text-center border-b-2 border-red-50 w-full p-2 hover:border-red-700 hover:text-red-700 fa-sitemap"></i>
-            <i class="fas criterion-icon text-center border-b-2 border-red-50 w-full p-2 hover:border-red-700 hover:text-red-700 fa-cogs"></i>
-            <i class="fas criterion-icon text-center border-b-2 border-red-50 w-full p-2 hover:border-red-700 hover:text-red-700 fa-file-alt"></i>
-          </div>
-
-    </div>
-
                             <!-- AI Feedback by Criterias-->
                             <div id="aiFeedbackDisplay" class="space-y-4"></div>
                             <template id="criterionTemplate">
-                              <div class="criterion-item text-gray-600 hover:text-black hover:bg-gray-50 hover:shadow-lg cursor-default transition-all duration-200 p-4 mb-2 border rounded-lg">
+                              <div class="criterion-item text-gray-700 p-4 mb-2 bg-gray-50 border-b-2 border-grey-500 rounded-lg">
                                 <div class="flex gap-4 items-start">
                                   <i class="fas criterion-icon text-xl w-5"></i>
                                   <div class="w-full">

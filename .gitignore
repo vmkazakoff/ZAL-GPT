@@ -1,3 +1,16 @@
+# Backend folder
+/backend/
+
+# Archive folder
+/archive/
+
+# Documentation folder
+/docs/
+
+# Qwen file - keep out of git
+/QWEN.md
+
+
 # Dependencies
 node_modules/
 
@@ -65,14 +78,4 @@ Thumbs.db
 .clasp.json
 .clasp.settings.json
 
-# Backend folder - published separately to Google Apps Script
-/backend/
 
-# Archive folder - contains old files that might be useful
-/archive/
-
-# Documentation folder - already moved there
-/docs/
-
-# Qwen file - keep out of git
-/QWEN.md

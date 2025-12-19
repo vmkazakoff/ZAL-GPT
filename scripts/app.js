@@ -66,19 +66,34 @@ async function loadTaskData(id, userId) {
 
             if (data.userInfo) {
                 localStorage.setItem('userInfo', JSON.stringify(data.userInfo));
-                
+
             }
             document.getElementById('taskSection').classList.remove('hidden');
             document.getElementById('taskTitle').textContent = data.task.title;
             document.getElementById('taskDescription').innerHTML = data.task.description;
 
             attempts = data.completions || [];
+
+            // Вычисляем разницу для каждой попытки
+            for (let i = 0; i < attempts.length; i++) {
+                if (i === 0) {
+                    // Для первой попытки разница не вычисляется
+                    attempts[i].gradeDiff = null;
+                } else {
+                    // Для других попыток вычисляем разницу с предыдущей
+                    const currentGrade = attempts[i].feedback.ai_grade || 0;
+                    const previousGrade = attempts[i - 1].feedback.ai_grade || 0;
+                    attempts[i].gradeDiff = currentGrade - previousGrade;
+                }
+            }
+
             window.totalAllowedAttempts = data.task.allowedAttempts; // Store globally for easy access
 
             initAttemptsNavigation(); // Initialize navigation visibility and button handlers
 
             if (attempts.length > 0) {
                 currentAttemptIndex = attempts.length - 1;
+
                 displayAttempt(currentAttemptIndex);
             } else {
                 currentAttemptIndex = -1; // No previous attempts
@@ -144,14 +159,22 @@ function displayAttempt(index) {
     const nextBtn = document.getElementById('nextAttemptBtn');
 
     promptInput.value = attempt.user_prompt;
-    displayFeedback(attempt.feedback);
+
+    // Передаем gradeDiff как часть данных для отображения
+    // Создаем копию данных с добавленным значением разницы
+    const feedbackData = {
+        ...attempt.feedback,
+        gradeDiff: attempt.gradeDiff
+    };
+
+    displayFeedback(feedbackData);
 
     currentAttemptDisplay.textContent = index + 1;
     document.getElementById('totalAttemptsDisplay').textContent = window.totalAllowedAttempts;
 
     prevBtn.disabled = index === 0;
     nextBtn.disabled = (index === attempts.length - 1 && attempts.length >= window.totalAllowedAttempts);
-    
+
     document.getElementById('aiResponseSection').classList.remove('hidden');
     updateSubmitButtonState(); // Call the new function to manage button state
 }
@@ -166,6 +189,15 @@ function displayNewAttemptState(index) {
     document.getElementById('aiResponseSection').classList.add('hidden'); // Hide AI response
     document.getElementById('feedbackPlaceholder').classList.remove('hidden'); // Show feedback placeholder
     document.getElementById('feedbackContent').classList.add('hidden'); // Hide feedback content
+
+    // Очищаем элемент разницы при переходе к новой попытке
+    const finalGradeSection = document.getElementById('finalGradeSection');
+    if (finalGradeSection) {
+        const gradeDiffElement = finalGradeSection.querySelector('.text-xs.text-green-500.leading-tight');
+        if (gradeDiffElement) {
+            gradeDiffElement.innerHTML = '0.0';
+        }
+    }
 
     prevBtn.disabled = index === 0;
     nextBtn.disabled = 1;
@@ -238,15 +270,36 @@ async function submitPrompt() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            // New logic: Directly display feedback with animation
-            document.getElementById('aiResponseSection').classList.remove('hidden');
-            displayFeedback(data.feedback);
-
             // Silently update the state in the background
             const newAttempt = { user_prompt: prompt, feedback: data.feedback };
             attempts.push(newAttempt);
+
+            // Вычисляем разницу для новой попытки
+            const newAttemptIndex = attempts.length - 1;
+            if (newAttemptIndex === 0) {
+                // Для первой попытки разница не вычисляется
+                attempts[newAttemptIndex].gradeDiff = null;
+            } else {
+                // Для других попыток вычисляем разницу с предыдущей
+                const currentGrade = attempts[newAttemptIndex].feedback.ai_grade || 0;
+                const previousGrade = attempts[newAttemptIndex - 1].feedback.ai_grade || 0;
+                attempts[newAttemptIndex].gradeDiff = currentGrade - previousGrade;
+            }
+
             currentAttemptIndex = attempts.length - 1;
-            
+
+            // New logic: Directly display feedback with animation
+            document.getElementById('aiResponseSection').classList.remove('hidden');
+
+            // Передаем gradeDiff как часть данных для отображения
+            // Создаем копию данных с добавленным значением разницы
+            const feedbackData = {
+                ...data.feedback,
+                gradeDiff: attempts[currentAttemptIndex].gradeDiff
+            };
+
+            displayFeedback(feedbackData);
+
             initAttemptsNavigation(); // Re-initialize to update counters and buttons
             updateSubmitButtonState(); // Update the button state after submission
 
@@ -334,6 +387,36 @@ function displayFeedback(data) {
     if (finalGradeSection && finalGradeDisplay) {
         finalGradeDisplay.textContent = (data.ai_grade || 0).toFixed(1);
         finalGradeSection.classList.remove('hidden');
+
+        // Вычисляем и отображаем разницу с предыдущей попыткой
+        const gradeDiffElement = finalGradeSection.querySelector('#gradeDiffDisplay');
+        if (gradeDiffElement) {
+            // Сбрасываем классы и очищаем элемент
+            gradeDiffElement.innerHTML = '';
+
+            if (data.gradeDiff !== undefined && data.gradeDiff !== null) {
+                const diff = data.gradeDiff;
+
+                // Устанавливаем цвет и текст в зависимости от направления изменения
+                if (diff > 0) {
+                    gradeDiffElement.classList.add('text-green-500');
+                    gradeDiffElement.classList.remove('text-red-500');
+                } else if (diff < 0) {
+                    gradeDiffElement.classList.add('text-red-500');
+                    gradeDiffElement.classList.remove('text-green-500');
+                }
+
+                gradeDiffElement.textContent = `${diff > 0 ? ' +' : ' '}${diff.toFixed(1)} `;
+            } else {
+                // Если разницы нет (например, для первой попытки), оставляем элемент пустым
+                gradeDiffElement.innerHTML = ''; // Очищаем элемент
+            }
+        }
+
+        // Обновляем график с новыми данными
+        if (typeof updateGradeChart === 'function') {
+            updateGradeChart(data);
+        }
     }
 }
 
