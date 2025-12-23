@@ -48,10 +48,55 @@
     <div class="container mx-auto px-4 py-8 max-w-6xl">
         
         <!-- Loading Indicator -->
-        <div id="loadingIndicator" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-xl shadow-lg z-50">
-            <div class="flex items-center">
-                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-red-700 mr-3"></div>
-                <span class="text-gray-700">Загрузка...</span>
+        <div id="loadingIndicator" class="hidden fixed flex inset-0 bg-black bg-opacity-50 items-center justify-center z-10 backdrop-blur-sm">
+            <div class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-xl shadow-lg z-10">
+                <div class="flex items-center">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-red-700 mr-3"></div>
+                    <span class="text-gray-700">Загрузка...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Championship Banner -->
+
+
+        <!-- Championship Tasks List -->
+        <div id="championshipTasksContainer" class="hidden mb-6">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200">
+                <div id="championshipBanner" class="hidden bg-gradient-to-r from-red-700 to-red-600 text-white p-4 rounded-t-lg">
+                    <div class="max-w-6xl mx-auto flex items-center">
+                        <i class="fas fa-trophy text-4xl mr-5"></i>
+                        <div>
+                            <h2 id="championshipTitle" class="text-xl font-bold"></h2>
+                            <p id="championshipDescription" class="text-red-100"></p>
+                        </div>
+                    </div>
+                </div>
+                <div id="championshipTasksList" class="flex justify-between overflow-x-auto py-4 min-w-full">
+                    <!-- Championship tasks will be rendered here -->
+                </div>
+
+                <!-- Championship Task Template -->
+                <template id="championshipTaskTemplate">
+                    <div class="championship-task-item rounded-lg flex flex-col items-center cursor-pointer transition-all duration-200 mx-4 py-4 px-1 hover:bg-slate-100 group opacity-60 hover:opacity-100">
+                        <div class="flex">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                                <i class="fas fa-circle task-icon absolute z-9 text-5xl text-red-600"></i>
+                                <span class="task-number text-sm relative inline-flex items-center justify-center w-full h-full text-white">
+                                </span>
+                            </div>
+                        </div>
+                        <div class="task-id text-xs font-normal transition-all duration-200 group-hover:font-bold group-hover:tracking-tight text-black mt-2 max-w-[80px] line-clamp-2"></div>
+                    </div>
+                </template>
+
+                <!-- Championship Task Separator Template -->
+                <template id="championshipTaskSeparatorTemplate">
+                    <div class="championship-task-separator flex-1">
+                        <div class="h-9 border-b-2 border-gray-300"></div>
+                    </div>
+                </template>
+
             </div>
         </div>
 
@@ -143,11 +188,11 @@
                                     </div>
                                   </div>
 
-                                  <div class="absolute w-full h-3/5 bottom-0 z-10 shadow-lg">
+                                  <div class="absolute w-full h-3/5 bottom-0 z-1 shadow-lg">
                                     <canvas id="chart" height="100"></canvas>
                                   </div>
 
-                                  <div class="absolute w-full bottom-0 flex justify-between text-red-600 z-20 text-sm">
+                                  <div class="absolute w-full bottom-0 flex justify-between text-red-600 z-2 text-sm">
                                     <i class="fas criterion-icon p-2 fa-user-circle"></i>
                                     <i class="fas criterion-icon p-2 fa-tasks"></i>
                                     <i class="fas criterion-icon p-2 fa-database"></i>
@@ -184,9 +229,6 @@
                               </div>
                             </template>
 
-                        
-                        
-
                     </div>
                 </div>
 
@@ -204,7 +246,7 @@
         </div>
 
         <!-- Auth Modal -->
-        <div id="authModal" class="fixed flex inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4" onclick="closeAuthModal()">
+        <div id="authModal" class="fixed flex inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 backdrop-blur-sm" onclick="closeAuthModal()">
             <div class="bg-white rounded-xl max-w-md w-full p-6" onclick="event.stopPropagation()">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-bold text-gray-800">Представьтесь</h3>
@@ -244,7 +286,7 @@
         </div>
 
         <!-- QR Code Modal -->
-        <div id="qrModal" class="fixed flex inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4" onclick="closeQRModal()">
+        <div id="qrModal" class="fixed flex inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 backdrop-blur-sm" onclick="closeQRModal()">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 text-center" onclick="event.stopPropagation()">
                 <h3 class="text-lg font-bold text-gray-800 mb-4">QR-код для входа</h3>
                 

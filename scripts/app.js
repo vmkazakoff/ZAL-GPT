@@ -3,7 +3,8 @@ const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzJEnhim0Ek2UsYZxxS
 
 // --- URL Parameter Handling ---
 const urlParams = new URLSearchParams(window.location.search);
-const taskId = urlParams.get('practice'); // Changed from 'task' to 'practice' as per description
+let taskId = urlParams.get('practice'); // Changed from 'task' to 'practice' as per description, now let instead of const
+const championshipId = urlParams.get('championship');
 const userIdFromUrl = urlParams.get('user');
 
 // Use user ID from URL if provided
@@ -40,24 +41,52 @@ if (!localStorage.getItem('userInfo')) {
 // --- Global State ---
 let attempts = [];
 let currentAttemptIndex = -1;
+let currentActiveTaskId = taskId; // Track the currently active task
+
+// --- Update Active Task Highlighting ---
+function updateActiveTaskHighlight(taskId) {
+    currentActiveTaskId = taskId;
+
+    // Remove active state from all tasks
+    const allTaskElements = document.querySelectorAll('.championship-task-item');
+    allTaskElements.forEach(element => {
+        element.classList.remove('bg-slate-100');
+        element.classList.add('opacity-60');
+    });
+
+    // Add active state to the specified task
+    if (taskId) {
+        const activeTaskElement = document.querySelector(`.championship-task-item[data-task-id="${taskId}"]`);
+        if (activeTaskElement) {
+            activeTaskElement.classList.add('bg-slate-100');
+            activeTaskElement.classList.remove('opacity-60');
+        }
+    }
+}
 
 // --- Initialization Logic ---
 document.addEventListener('DOMContentLoaded', function() {
     const userId = localStorage.getItem('userId');
     const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
-    // Check for task ID
-    if (!taskId) {
-        document.getElementById('errorSection').classList.remove('hidden');
-        return; // Stop further execution if no task ID
-    }            
+    // Championship mode detection
+    if (championshipId) {
+        loadChampionshipTasks(championshipId, userId, true);
+    }
 
-    // Load task data from backend
-    loadTaskData(taskId, userId);
+    // Check for task ID
+    if (taskId) {
+        // Load task data from backend
+        loadTaskData(taskId, userId);
+    } else if (!championshipId) {
+        // Only show error if neither championship nor task is specified
+        document.getElementById('errorSection').classList.remove('hidden');
+        return; // Stop further execution if no task ID and no championship
+    }
 });
 
 async function loadTaskData(id, userId) {
-    showLoading();
+    showLoading('task');
     try {
         const response = await fetch(`${BACKEND_URL}?action=getPractice&practice=${encodeURIComponent(id)}&user=${encodeURIComponent(userId)}`);
         const data = await response.json();
@@ -117,7 +146,11 @@ async function loadTaskData(id, userId) {
         document.getElementById('errorSection').classList.remove('hidden');
         document.getElementById('errorDetails').textContent = 'Ошибка сети при загрузке задания.';
     } finally {
-        hideLoading();
+        // Update active task highlighting after loading task
+        if (championshipId) {
+            updateActiveTaskHighlight(currentActiveTaskId);
+        }
+        hideLoading('task');
     }
 }
 
@@ -303,6 +336,26 @@ async function submitPrompt() {
             initAttemptsNavigation(); // Re-initialize to update counters and buttons
             updateSubmitButtonState(); // Update the button state after submission
 
+            // Update championship task display immediately if in championship mode
+            if (championshipId && window.championshipData) {
+                // Calculate the best score from all attempts to ensure we have the highest
+                const bestScore = attempts.reduce((best, attempt) => {
+                    const score = attempt.feedback.ai_grade || 0;
+                    return score > best ? score : best;
+                }, 0);
+
+                // Update the championship data in place
+                const taskToUpdate = window.championshipData.tasks.find(t => t.taskId === taskId);
+                if (taskToUpdate) {
+                    taskToUpdate.status = "completed";
+                    taskToUpdate.attemptsCount = attempts.length;
+                    taskToUpdate.bestScore = bestScore;
+                }
+
+                // Update the specific task element in the UI
+                updateSpecificChampionshipTaskElement(taskId, bestScore, attempts.length);
+            }
+
         } else {
             alert('Ошибка при отправке промпта: ' + (data.error || 'Неизвестная ошибка'));
             updateSubmitButtonState(); // Re-enable button on error
@@ -311,6 +364,48 @@ async function submitPrompt() {
         console.error('Network error:', error);
         alert('Ошибка сети при отправке промпта.');
         updateSubmitButtonState(); // Re-enable button on error
+    }
+}
+
+// --- Update championship task status after submission ---
+async function updateChampionshipTaskStatus() {
+    if (championshipId) {
+        const userId = localStorage.getItem('userId');
+        await loadChampionshipTasks(championshipId, userId, false);
+    }
+}
+
+// --- Update specific championship task element after submission ---
+function updateSpecificChampionshipTaskElement(taskId, bestScore, attemptsCount) {
+    // Find the championship task element in the UI
+    const taskElement = document.querySelector(`.championship-task-item[data-task-id="${taskId}"]`);
+
+    if (taskElement) {
+        // Update the task status to completed
+        // Change the icon to star
+        const taskIcon = taskElement.querySelector('.task-icon');
+        if (taskIcon) {
+            // Replace circle with star icon
+            taskIcon.className = taskIcon.className.replace('fa-circle', 'fa-star');
+            // Update color to yellow
+            taskIcon.classList.add('text-yellow-500');
+            taskIcon.classList.remove('text-red-600');
+            taskIcon.classList.add('-translate-y-[2px]');
+        }
+
+        // Update the score displayed in the center
+        const taskNumberSpan = taskElement.querySelector('.task-number');
+        if (taskNumberSpan) {
+            if (!bestScore || bestScore == null) {taskNumberSpan.textContent = '0.0' }
+            else { taskNumberSpan.textContent = bestScore.toFixed(1) }
+        }
+
+        // Update the background and text colors to indicate completion
+        const taskCircle = taskElement.querySelector('.task-circle');
+        if (taskCircle) {
+            taskCircle.classList.remove('bg-red-100', 'text-red-800');
+            taskCircle.classList.add('bg-yellow-400', 'text-yellow-300');
+        }
     }
 }
 
@@ -348,7 +443,6 @@ function displayFeedback(data) {
 
     if (!container || !template) return;
 
-    // ✅ Очищаем контейнер перед добавлением новых элементов
     container.innerHTML = '';
 
     const aiCriteria = data.ai_criteria || {};
@@ -576,10 +670,181 @@ function closeQRModal() {
 }
 
 // --- Loading Indicator ---
-function showLoading() {
+// Track loading states by source
+const loadingStates = {};
+
+function showLoading(source = 'default') {
+    // Add this loading source to the tracking object
+    loadingStates[source] = true;
+    // Show the loading indicator if any source is loading
     document.getElementById('loadingIndicator').classList.remove('hidden');
 }
 
-function hideLoading() {
-    document.getElementById('loadingIndicator').classList.add('hidden');
+function hideLoading(source = 'default') {
+    // Remove this loading source from the tracking object
+    delete loadingStates[source];
+    // Hide the loading indicator only if no sources are loading
+    const sources = Object.keys(loadingStates);
+    if (sources.length === 0) {
+        document.getElementById('loadingIndicator').classList.add('hidden');
+    }
+}
+
+// --- Championship Tasks Loading ---
+async function loadChampionshipTasks(championshipId, userId, loading = true) {
+    if (loading) { showLoading('championship') };
+    try {
+        const response = await fetch(`${BACKEND_URL}?action=getChampionship&championship=${encodeURIComponent(championshipId)}&user=${encodeURIComponent(userId)}`);
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            window.championshipData = data;
+            renderChampionshipTasks(data);
+        } else {
+            console.error('Error loading championship:', data.error || 'Unknown error');
+        }
+    } catch (error) {
+        console.error('Network error loading championship:', error);
+    } finally {
+        if (loading) { hideLoading('championship') };
+    }
+}
+
+// --- Render Championship Tasks ---
+function renderChampionshipTasks(championshipData) {
+    // Показываем баннер чемпионата
+    const championshipBanner = document.getElementById('championshipBanner');
+    if (championshipBanner) {
+        championshipBanner.classList.remove('hidden');
+    }
+
+    // Обновляем баннер чемпионата
+    const championshipTitle = document.getElementById('championshipTitle');
+    const championshipDescription = document.getElementById('championshipDescription');
+
+    if (championshipTitle) {
+        championshipTitle.textContent = championshipData.championship?.title || championshipData.championship?.id || 'Неизвестный чемпионат';
+    }
+
+    if (championshipDescription) {
+        championshipDescription.textContent = championshipData.championship?.description || '';
+    }
+
+    // Находим элемент для отображения заданий чемпионата
+    const container = document.getElementById('championshipTasksContainer');
+    const list = document.getElementById('championshipTasksList');
+
+    if (container && list) {
+        container.classList.remove('hidden');
+
+        list.innerHTML = '';
+
+        const taskTemplate = document.getElementById('championshipTaskTemplate');
+        const separatorTemplate = document.getElementById('championshipTaskSeparatorTemplate');
+
+        if (taskTemplate && championshipData.tasks && championshipData.tasks.length > 0) {
+            championshipData.tasks.forEach((task, index) => {
+                const taskElement = taskTemplate.content.cloneNode(true);
+
+                // Заполняем номер задания или балл, если выполнено
+                const taskNumberSpan = taskElement.querySelector('.task-number');
+                if (taskNumberSpan) {
+                    if (task.status === 'completed') {
+                        if (task.bestScore !== null) {
+                            taskNumberSpan.textContent = task.bestScore.toFixed(1);
+                        } else {
+                            taskNumberSpan.textContent = '0.0';
+                        }
+                    } else {
+                        taskNumberSpan.textContent = task.taskNumber;
+                    }
+                }
+
+                const taskIdElement = taskElement.querySelector('.task-id');
+                if (taskIdElement) {
+                    taskIdElement.textContent = task.title || task.taskId;
+                }
+
+                // Добавляем обработчик клика для перехода к заданию
+                const wrapperElement = taskElement.querySelector('.championship-task-item');
+                if (wrapperElement) {
+                    // Обновляем стиль в зависимости от статуса выполнения
+                    const taskCircleElement = wrapperElement.querySelector('.task-icon');
+                    if (taskCircleElement) {
+                        if (task.status === 'completed') {
+                            taskCircleElement.classList.remove('text-red-600', 'fa-circle');
+                            taskCircleElement.classList.add('text-yellow-500', 'fa-star', '-translate-y-[2px]');
+                        }
+                    }
+
+                    // Обновляем содержимое кружка в зависимости от статуса выполнения
+                    const taskNumberSpan = taskElement.querySelector('.task-number');
+                    if (taskNumberSpan) {
+                        if (task.status === 'completed') {
+                            if (task.bestScore) {
+                                taskNumberSpan.textContent = task.bestScore.toFixed(1);
+                            } else {
+                                taskNumberSpan.textContent = '0.0';
+                            }
+                        } else {
+                            taskNumberSpan.textContent = "№"+task.taskNumber;
+                        }
+                    }
+
+                    wrapperElement.addEventListener('click', () => {
+                        // Обновляем глобальный taskId и URL с параметрами чемпионата и задания
+                        taskId = task.taskId; // Обновляем глобальный taskId
+                        const currentUrl = new URL(window.location);
+                        currentUrl.searchParams.set('championship', championshipId);
+                        currentUrl.searchParams.set('practice', task.taskId);
+                        window.history.replaceState({}, '', currentUrl.toString());
+
+                        // Обновляем подсветку активного задания до загрузки задачи
+                        updateActiveTaskHighlight(task.taskId);
+
+                        loadTaskData(task.taskId, localStorage.getItem('userId'));
+                    });
+                }
+
+                // Обновляем стиль названия задания - убираем truncate и разрешаем перенос
+                if (taskIdElement) {
+                    taskIdElement.classList.remove('truncate');
+                    taskIdElement.classList.add('text-center', 'break-words');
+                    taskIdElement.style.maxWidth = '100px'; // Увеличиваем max-width для более длинных названий
+                }
+
+                // Устанавливаем data-атрибут для идентификации задачи
+                if (wrapperElement) {
+                    wrapperElement.setAttribute('data-task-id', task.taskId);
+                }
+
+                // Добавляем заполненный шаблон в контейнер
+                list.appendChild(taskElement);
+
+                // Добавляем разделитель после каждого элемента, кроме последнего
+                if (index < championshipData.tasks.length - 1 && separatorTemplate) {
+                    const separatorElement = separatorTemplate.content.cloneNode(true);
+                    list.appendChild(separatorElement);
+                }
+            });
+
+
+            // Если в URL нет practice=id, но есть championship, обновляем URL и загружаем первое задание
+            if (!taskId && championshipId && championshipData.tasks.length > 0) {
+                const firstTaskId = championshipData.tasks[0].taskId;
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('championship', championshipId);
+                currentUrl.searchParams.set('practice', firstTaskId);
+                window.history.replaceState({}, '', currentUrl.toString());
+
+                // Обновляем глобальный taskId перед загрузкой задачи
+                taskId = firstTaskId;
+
+                loadTaskData(firstTaskId, localStorage.getItem('userId'));
+            }
+        } else {
+            list.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">Нет доступных заданий</div>';
+        }
+        if (championshipId && taskId) { updateActiveTaskHighlight(taskId) };
+    }
 }

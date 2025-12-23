@@ -77,7 +77,7 @@ function updateGradeChart(feedbackData) {
     gradeChart.data.datasets.push({
       backgroundColor: "rgba(220, 38, 38, .1)",
       //borderColor: "rgb(220, 38, 38)",
-      borderColor: "#fff",
+      borderColor: "transparent",
       borderWidth: 0,
       data: data
     });
