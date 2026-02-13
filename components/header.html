@@ -8,6 +8,14 @@
         </span>
       </div>
       <nav class="flex items-center space-x-4">
+        <!-- Team management button - only visible in championship mode -->
+        <button
+          class="flex h-10 w-10 items-center justify-center rounded-full font-medium text-slate-400 transition-colors hover:bg-gray-100 hover:text-slate-600"
+          @click="$store.app.modals.team = true"
+          x-show="$store.app.mode === 'championship'"
+        >
+          <i class="fas fa-users"></i>
+        </button>
         <button
           class="flex h-10 w-10 items-center justify-center rounded-full font-medium text-slate-400 transition-colors hover:bg-gray-100 hover:text-slate-600"
           @click="$store.app.modals.qr = true"

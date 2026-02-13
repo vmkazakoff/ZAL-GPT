@@ -5,24 +5,24 @@
     // Mock data for exercise rating (by task)
     getMockExerciseRating() {
       return [
-        { rank: 1, name: 'Иванов Иван', company: 'Компания A', score: 9.8 },
-        { rank: 2, name: 'Петров Петр', company: 'Компания B', score: 9.5 },
-        { rank: 3, name: 'Сидоров Сидор', company: 'Компания C', score: 9.2 },
-        { rank: 4, name: 'Козлов Алексей', company: 'Компания A', score: 8.9 },
-        { rank: 5, name: 'Волков Дмитрий', company: 'Компания D', score: 8.7 },
+        { rank: 1, team: 'Компания A', score: 9.8 },
+        { rank: 2, team: 'Компания B', score: 9.5 },
+        { rank: 3, team: 'Компания C', score: 9.2 },
+        { rank: 4, team: 'Компания A', score: 8.9 },
+        { rank: 5, team: 'Компания D', score: 8.7 },
       ];
     },
 
     // Mock data for championship rating (leaderboard)
     getMockChampionshipRating() {
       return [
-        { rank: 1, name: 'Иванов Иван', company: 'Компания A', completedTasks: 12, totalScore: 112.3 },
-        { rank: 2, name: 'Петров Петр', company: 'Компания B', completedTasks: 12, totalScore: 109.7 },
-        { rank: 3, name: 'Сидоров Сидор', company: 'Компания C', completedTasks: 12, totalScore: 107.2 },
-        { rank: 4, name: 'Козлов Алексей', company: 'Компания A', completedTasks: 11, totalScore: 98.5 },
-        { rank: 5, name: 'Волков Дмитрий', company: 'Компания D', completedTasks: 10, totalScore: 89.2 },
-        { rank: 6, name: 'Медведев Сергей', company: 'Компания E', completedTasks: 9, totalScore: 82.1 },
-        { rank: 7, name: 'Новиков Андрей', company: 'Компания F', completedTasks: 8, totalScore: 76.8 },
+        { rank: 1, team: 'Компания A', completedTasks: 12, totalScore: 112.3 },
+        { rank: 2, team: 'Компания B', completedTasks: 12, totalScore: 109.7 },
+        { rank: 3, team: 'Компания C', completedTasks: 12, totalScore: 107.2 },
+        { rank: 4, team: 'Компания A', completedTasks: 11, totalScore: 98.5 },
+        { rank: 5, team: 'Компания D', completedTasks: 10, totalScore: 89.2 },
+        { rank: 6, team: 'Компания E', completedTasks: 9, totalScore: 82.1 },
+        { rank: 7, team: 'Компания F', completedTasks: 8, totalScore: 76.8 },
       ];
     },
 
@@ -52,7 +52,7 @@
   </div>
 
   <!-- Championship Banner - Show only in championship mode -->
-  <div class="rounded-t-xl bg-red-700 p-4 text-white" x-show="$store.app.mode === 'championship'">
+  <div class="rounded-t-xl bg-red-700 p-4 text-white" :class="$store.app.mode === 'stack' ? 'mt-8' : ''">
     <div class="flex items-center">
       <i class="fas fa-trophy mr-5 text-4xl"></i>
       <div class="flex-grow">
@@ -65,10 +65,7 @@
   <!-- Tasks Tab Content - Show always, but tabs only in championship mode -->
   <div x-show="$store.app.mode === 'championship' ? activeTab === 'tasks' : true">
     <!-- Championship/Stack Tasks List -->
-    <div
-      class="rounded-b-xl border border-gray-200 bg-white shadow-lg"
-      :class="$store.app.mode === 'stack' ? 'mt-8 rounded-t-xl' : ''"
-    >
+    <div class="rounded-b-xl border border-gray-200 bg-white shadow-lg">
       <div class="flex w-full justify-between overflow-x-auto py-4">
         <template x-for="(task, taskId) in $store.app.tasks">
           <div
@@ -124,13 +121,13 @@
         <!-- Exercise Rating Table -->
         <div x-show="exerciseRatingOpen" class="mx-4 mb-4 overflow-x-auto">
           <div class="space-y-1">
-            <template x-for="(item, index) in getMockExerciseRating()" :key="`rating-${item.name}-${index}`">
+            <template x-for="(item, index) in getMockExerciseRating()" :key="`rating-${index}`">
               <div
                 class="flex items-center justify-between rounded-lg px-4 py-1 transition-colors duration-200 hover:bg-slate-100"
               >
                 <div class="flex items-center">
                   <div class="mr-6 w-8 text-slate-700" x-text="item.rank"></div>
-                  <div class="text-black" x-text="item.company"></div>
+                  <div class="text-black" x-text="item.team"></div>
                 </div>
                 <div class="text-right">
                   <span class="font-bold text-black" x-text="item.score.toFixed(1)"></span>
@@ -210,14 +207,14 @@
       <h3 class="mb-4 text-xl font-bold text-gray-800">Рейтинг лидеров</h3>
       <div class="overflow-x-auto">
         <div class="space-y-1">
-          <template x-for="(item, index) in getMockChampionshipRating()" :key="`rating-${item.name}-${index}`">
+          <template x-for="(item, index) in getMockChampionshipRating()" :key="`rating-${index}`">
             <div
               class="flex items-center justify-between rounded-lg p-2 transition-colors duration-200 hover:bg-slate-100"
             >
               <div class="flex items-center">
-                <div class="dashboard-rating-rank mr-6 w-8 text-2xl font-bold text-slate-700" x-text="item.rank"></div>
+                <div class="mr-6 w-8 text-2xl font-bold text-slate-700" x-text="item.rank"></div>
                 <div>
-                  <div class="dashboard-rating-company text-lg font-bold text-black" x-text="item.company"></div>
+                  <div class="text-lg font-bold text-black" x-text="item.team"></div>
                   <div class="text-sm text-slate-400">
                     Выполнено заданий: <span x-text="item.completedTasks"></span>
                   </div>

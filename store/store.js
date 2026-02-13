@@ -51,7 +51,12 @@ document.addEventListener("alpine:init", () => {
     modals: {
       auth: false,
       qr: false,
+      team: false,
     },
+
+    // Данные о командах
+    availableTeams: [], // Массив доступных команд для текущего чемпионата, структура: { id: "string", name: "string" }
+    currentTeam: { id: "", name: "" }, // Объект с информацией о текущей команде пользователя в текущем чемпионате, структура: { id: "string", name: "string" } или null если нет команды
 
     init() {
       // Initialize from URL parameters
@@ -118,6 +123,13 @@ document.addEventListener("alpine:init", () => {
 
           this.currentTaskId = firstUncompletedTaskId || Object.keys(this.tasks)[0];
           this.loadTaskData(this.currentTaskId);
+
+          // Load team information after championship data is loaded (only in championship mode)
+          if (this.mode === "championship") {
+            await this.loadCurrentTeam();
+            await this.loadAvailableTeams();
+          }
+
           return;
         }
       } catch (error) {
@@ -262,5 +274,182 @@ document.addEventListener("alpine:init", () => {
         throw error;
       }
     },
+
+    // Load user's team for the current championship
+    async loadCurrentTeam() {
+      if (!this.championshipId) return;
+
+      try {
+        const response = await fetch(
+          `${this.BACKEND_URL}?action=getTeamByUser&user=${encodeURIComponent(this.userId)}&championship=${encodeURIComponent(this.championshipId)}`,
+        );
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          this.currentTeam = data.team;
+        } else {
+          console.error("Error loading user's team:", data.error);
+          this.currentTeam = null;
+        }
+      } catch (error) {
+        console.error("Network error loading user's team:", error);
+        this.currentTeam = null;
+      }
+    },
+
+    // Load available teams for the current championship
+    async loadAvailableTeams() {
+      if (!this.championshipId) return;
+
+      try {
+        const response = await fetch(
+          `${this.BACKEND_URL}?action=getTeamsForChampionship&championship=${encodeURIComponent(this.championshipId)}`,
+        );
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          this.availableTeams = data.teams;
+        } else {
+          console.error("Error loading available teams:", data.error);
+          this.availableTeams = [];
+        }
+      } catch (error) {
+        console.error("Network error loading available teams:", error);
+        this.availableTeams = [];
+      }
+    },
+
+    // Create a new team
+    async createTeam(teamName) {
+      if (!this.championshipId) return;
+
+      try {
+        const response = await fetch(this.BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "createNewTeam",
+            teamName: teamName,
+            user: this.userId,
+            championship: this.championshipId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Update current team and refresh available teams
+          this.currentTeam = data.team;
+          await this.loadAvailableTeams();
+          return data;
+        } else {
+          console.error("Error creating team:", data.error);
+          throw new Error(data.error || "Failed to create team");
+        }
+      } catch (error) {
+        console.error("Network error creating team:", error);
+        throw error;
+      }
+    },
+
+    // Join an existing team
+    async joinTeam(teamId) {
+      if (!this.championshipId) return;
+
+      try {
+        const response = await fetch(this.BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "joinExistingTeam",
+            teamId: teamId,
+            user: this.userId,
+            championship: this.championshipId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Update current team and refresh available teams
+          this.currentTeam = data.team;
+          await this.loadAvailableTeams();
+          return data;
+        } else {
+          console.error("Error joining team:", data.error);
+          throw new Error(data.error || "Failed to join team");
+        }
+      } catch (error) {
+        console.error("Network error joining team:", error);
+        throw error;
+      }
+    },
+
+    // Leave current team
+    async leaveTeam() {
+      if (!this.championshipId || !this.currentTeam) return;
+
+      try {
+        const response = await fetch(this.BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "leaveTeam",
+            teamId: this.currentTeam.id,
+            user: this.userId,
+            championship: this.championshipId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Clear current team and refresh available teams
+          this.currentTeam = null;
+          await this.loadAvailableTeams();
+          return data;
+        } else {
+          console.error("Error leaving team:", data.error);
+          throw new Error(data.error || "Failed to leave team");
+        }
+      } catch (error) {
+        console.error("Network error leaving team:", error);
+        throw error;
+      }
+    },
+
+    // Rename current team
+    async renameTeam(newName) {
+      if (!this.championshipId || !this.currentTeam) return;
+
+      try {
+        const response = await fetch(this.BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "renameTeam",
+            teamId: this.currentTeam.id,
+            newName: newName,
+            user: this.userId,
+            championship: this.championshipId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Update current team name and refresh available teams
+          this.currentTeam.name = newName;
+          await this.loadAvailableTeams();
+          return data;
+        } else {
+          console.error("Error renaming team:", data.error);
+          throw new Error(data.error || "Failed to rename team");
+        }
+      } catch (error) {
+        console.error("Network error renaming team:", error);
+        throw error;
+      }
+    }
   });
 });

@@ -103,6 +103,14 @@
       x-html="html"
     ></div>
 
+    <!-- Team Modal Component -->
+    <div
+      x-data="{html: ''}"
+      x-show="$store.app.modals.team"
+      x-init="html = await (await fetch('components/team-modal.html')).text()"
+      x-html="html"
+    ></div>
+
     <script src="store/store.js"></script>
   </body>
 </html>
