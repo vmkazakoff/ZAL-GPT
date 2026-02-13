@@ -110,11 +110,11 @@ document.addEventListener("alpine:init", () => {
         const data = await response.json();
 
         if (response.ok && data.success) {
-          this.championshipData = data.championship;
-          this.tasks = data.tasks;
-          // this.currentTaskId = Object.keys(this.tasks)[0]; // открыть по умолчанию первое задание
-          this.currentTaskId = Object.keys(this.tasks).at(-1); // открыть по умолчанию последнее задание
-          // а нужно открыть послед
+          const firstUncompletedTaskId = Object.keys(this.tasks).find(
+            (taskId) => this.tasks[taskId].status !== "completed",
+          );
+
+          this.currentTaskId = firstUncompletedTaskId || Object.keys(this.tasks)[0];
           this.loadTaskData(this.currentTaskId);
           return;
         }
