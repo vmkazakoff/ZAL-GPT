@@ -1,0 +1,115 @@
+<!-- Team Modal Component -->
+<div
+  x-data="{
+    teamNameInput: $store.app.currentTeam.name,
+    isCreating: false,
+    isRefreshing: false
+  }"
+  @click="$store.app.modals.team = false"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+  x-show="$store.app.modals.team"
+>
+  <div class="w-full max-w-xl rounded-xl bg-white p-6" @click.stop>
+    <div class="mb-4 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-gray-800">Моя команда</h3>
+      <button @click="$store.app.modals.team = false" class="text-gray-500 hover:text-gray-700">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="space-y-4">
+      <!-- Show input field for creating/rename team -->
+      <div>
+        <h4
+          class="font-medium text-gray-700"
+          x-text="$store.app.currentTeam ? 'Переименовать команду:' : 'Создать новую команду:'"
+        ></h4>
+        <div class="mt-2 flex">
+          <input
+            x-model="teamNameInput"
+            type="text"
+            :placeholder="$store.app.currentTeam ? $store.app.currentTeam.name : 'Название команды'"
+            class="flex-1 rounded-l-lg border border-gray-300 px-3 py-2 focus:border-red-700 focus:ring-1 focus:ring-red-700 focus:outline-none focus:ring-inset"
+            :disabled="isCreating"
+          />
+          <button
+            @click="async () => {
+              isCreating = true;
+              if (teamNameInput.trim()) {
+                if ($store.app.currentTeam) {
+                  await $store.app.renameTeam(teamNameInput);
+                } else {
+                  await $store.app.createTeam(teamNameInput);
+                }
+              } else if ($store.app.currentTeam) {
+                await $store.app.leaveTeam();
+              }
+              isCreating = false;
+              isRefreshing = true; // TODO - почему-то не отрабатывает, по логам все верно, хз почему компонент ниже не показывает прелоадер
+              await $store.app.loadAvailableTeams();
+              isRefreshing = false;
+            }"
+            :disabled="isCreating"
+            class="cursor-pointer rounded-r-lg bg-red-700 px-4 py-2 font-medium text-white hover:bg-red-800 disabled:opacity-75"
+          >
+            <div class="flex items-center">
+              <div x-show="isCreating" class="mr-2">
+                <div class="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
+              </div>
+              <span
+                x-text="!teamNameInput.trim() && $store.app.currentTeam ? 'Выйти' : ($store.app.currentTeam ? 'Переименовать' : 'Создать')"
+              ></span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Available teams to join -->
+      <div>
+        <div class="flex items-center justify-between">
+          <h4 class="font-medium text-gray-700">Доступные команды:</h4>
+          <button
+            @click="() => {
+              isRefreshing = true;
+              $store.app.loadAvailableTeams().finally(() => isRefreshing = false);
+            }"
+            class="flex cursor-pointer items-center text-sm text-slate-600 hover:text-slate-800"
+          >
+            <i class="fas fa-sync-alt mr-1" :class=" isRefreshing ? 'animate-spin' : ''"></i>
+            Обновить
+          </button>
+        </div>
+        <div x-show="$store.app.availableTeams.length > 0" class="mt-2 max-h-60 space-y-2 overflow-y-auto">
+          <template x-for="team in $store.app.availableTeams" :key="team.id">
+            <div
+              @click="() => {
+                isRefreshing = true;
+                $store.app.joinTeam(team.id).finally(() => isRefreshing = false);
+                }"
+              :disabled="isRefreshing"
+              class="group flex cursor-pointer items-center justify-between rounded-lg px-4 py-1 transition-colors duration-200 hover:bg-slate-100 disabled:cursor-default disabled:opacity-50"
+            >
+              <span class="font-medium" x-text="team.name"></span>
+              <span
+                class="text-sm font-medium text-transparent transition-colors duration-200 group-hover:text-slate-400"
+                >Присоединиться
+              </span>
+            </div>
+          </template>
+        </div>
+        <div x-show="$store.app.availableTeams.length === 0" class="py-4 text-sm text-gray-500 italic">
+          Пока не создано ни одной команды, обновите список, чтобы увидеть новые
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <button
+        @click="$store.app.modals.team = false"
+        class="w-full rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-700 hover:bg-gray-300"
+      >
+        Закрыть
+      </button>
+    </div>
+  </div>
+</div>
