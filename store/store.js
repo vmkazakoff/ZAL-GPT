@@ -128,14 +128,13 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
-    // заменить id на taskId
-    async loadTaskData(id) {
-      this.currentTaskId = id;
+    // проверить что нет излишней логики
+    async loadTaskData(taskId) {
+      this.currentTaskId = taskId;
       this.loadingStates["task"] = true;
       try {
-        // Use the new endpoint that returns data in the unified structure
         const response = await fetch(
-          `${this.BACKEND_URL}?action=getTaskWithAttempts&practice=${encodeURIComponent(id)}&user=${encodeURIComponent(this.userId)}`,
+          `${this.BACKEND_URL}?action=getTaskWithAttempts&practice=${encodeURIComponent(taskId)}&user=${encodeURIComponent(this.userId)}`,
         );
         const data = await response.json();
 
@@ -155,8 +154,8 @@ document.addEventListener("alpine:init", () => {
           };
 
           // If this task already exists in our store, merge the data to preserve championship-specific properties
-          if (this.tasks[id]) {
-            const existingTask = this.tasks[id];
+          if (this.tasks[taskId]) {
+            const existingTask = this.tasks[taskId];
             // Preserve championship-specific properties that might not be in practice data
             if (existingTask.hasOwnProperty("taskNumber") && newTask.taskNumber === undefined) {
               newTask.taskNumber = existingTask.taskNumber;
@@ -197,12 +196,12 @@ document.addEventListener("alpine:init", () => {
           // Add the task to our tasks object using the ID as key
           this.tasks = {
             ...this.tasks,
-            [id]: newTask,
+            [taskId]: newTask,
           };
 
           // Update currentTaskId if not already set
           if (!this.currentTaskId) {
-            this.currentTaskId = id;
+            this.currentTaskId = taskId;
           }
         } else {
           console.error("Error loading task:", data.error);
