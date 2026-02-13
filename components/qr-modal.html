@@ -1,0 +1,89 @@
+<!-- QR Code Modal -->
+<div
+  x-data="{
+  mode: 'general',
+  link: '',
+  generateQR() {
+    this.$nextTick(() => {
+
+      const url = new URL(location.href);
+      if (this.mode === 'personal') {
+            url.searchParams.set('user', $store.app.userId);
+        } else {
+            url.searchParams.delete('user');
+        }
+
+        this.link = url.toString();
+
+      const container = document.getElementById('qrcode');
+      if (!container) return;
+
+      container.innerHTML = '';
+      new QRCode(container, {
+        text: this.link,
+        width: 432,
+        height: 432,
+        colorDark: '#000000',
+        colorLight: '#f9f3f4',
+        correctLevel: QRCode.CorrectLevel.L
+      });
+    });
+  }
+  }"
+  x-init="generateQR()"
+  @click="$store.app.modals.qr = false"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+>
+  <div class="w-full max-w-lg rounded-xl bg-white p-6 text-center" @click.stop>
+    <h3 class="mb-4 text-lg font-bold text-gray-800">QR-код для входа</h3>
+
+    <!-- Tabs -->
+    <div class="mb-4 flex border-b border-gray-200">
+      <button
+        class="flex-1 border-b-2 px-4 py-2 text-sm font-medium"
+        :class="mode === 'general' ? 'border-red-600 text-red-600' : 'border-transparent hover:text-gray-600'"
+        @click="mode = 'general'; generateQR()"
+      >
+        Общий QR
+      </button>
+      <button
+        class="flex-1 border-b-2 px-4 py-2 text-sm font-medium"
+        :class="mode === 'personal' ? 'border-red-600 text-red-600' : 'border-transparent hover:text-gray-600'"
+        @click="mode = 'personal'; generateQR()"
+      >
+        Персональный QR
+      </button>
+    </div>
+
+    <div id="qrcodeContainer" class="mx-auto mb-4 w-fit rounded-lg bg-slate-100 p-4">
+      <div id="qrcode"></div>
+    </div>
+
+    <p class="mb-2 text-sm text-gray-600">Отсканируйте QR-код, чтобы открыть эту страницу на другом устройстве</p>
+
+    <div class="mb-4 flex items-center justify-between gap-2 rounded-lg bg-gray-100 p-3">
+      <p class="break-word text-left font-mono text-xs text-gray-800" x-text="link"></p>
+
+      <button
+        x-data="{copied: false}"
+        @click="
+          navigator.clipboard.writeText(link).then(() => {
+            copied = true;
+            setTimeout(() => { copied = false }, 12000);
+          })
+        "
+        :class="copied ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-700'"
+        class="p-1 transition-colors"
+      >
+        <i :class="copied ? 'fas fa-check' : 'fas fa-copy'"></i>
+      </button>
+    </div>
+
+    <button
+      @click="$store.app.modals.qr = false"
+      class="w-full rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-700 hover:bg-gray-300"
+    >
+      Закрыть
+    </button>
+  </div>
+</div>

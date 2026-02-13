@@ -1,0 +1,134 @@
+<!-- Auth Modal Component -->
+<div
+  x-data="{
+      isSubmitting: false,
+      BACKEND_URL: $store.app.BACKEND_URL,
+
+      // Локальные переменные для хранения значений из store
+      get name() { return this.$store.app.userInfo.name || '' },
+      set name(value) { this.$store.app.userInfo.name = value },
+      get company() { return this.$store.app.userInfo.company || '' },
+      set company(value) { this.$store.app.userInfo.company = value },
+      get email() { return this.$store.app.userInfo.email || '' },
+      set email(value) { this.$store.app.userInfo.email = value },
+      get phone() { return this.$store.app.userInfo.phone || '' },
+      set phone(value) { this.$store.app.userInfo.phone = value },
+
+      async saveUserInfo() {
+      this.isSubmitting = true;
+
+      // Prepare user info from store
+      const userInfo = {
+        name: String(this.name || ''),
+        company: String(this.company || ''),
+        email: String(this.email || ''),
+        phone: String(this.phone || ''),
+      };
+
+      try {
+        // Send user info to backend
+        const response = await fetch(this.BACKEND_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8',
+          },
+          body: JSON.stringify({
+            action: 'saveUser',
+            userId: this.$store.app.userId,
+            userInfo: userInfo,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          console.error('Error saving user info:', data.error);
+          // Alert user only if there's a specific error message
+          if (data.error) {
+            alert('Ошибка при сохранении профиля: ' + data.error);
+          }
+        }
+        // Even if backend fails, we still close the modal as store is updated
+      } catch (error) {
+        console.error('Network error saving user info:', error);
+        // Alert user about network issue
+        alert('Ошибка сети при сохранении профиля.');
+      } finally {
+        // Close modal and reset button state
+        this.$store.app.modals.auth = false;
+        this.isSubmitting = false;
+      }
+    }
+  }"
+  @click="$store.app.modals.auth = false"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+  x-show="$store.app.modals.auth"
+>
+  <div class="w-full max-w-md rounded-xl bg-white p-6" @click.stop>
+    <div class="mb-4 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-gray-800">Представьтесь</h3>
+      <button @click="$store.app.modals.auth = false" class="text-gray-500 hover:text-gray-700">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700">Имя *</label>
+        <input
+          x-model="name"
+          type="text"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2"
+          placeholder="Введите ваше имя"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700">Организация</label>
+        <input
+          x-model="company"
+          type="text"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2"
+          placeholder="Введите организацию"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700">Email</label>
+        <input
+          x-model="email"
+          type="email"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2"
+          placeholder="Введите email"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700">Телефон</label>
+        <input
+          x-model="phone"
+          type="tel"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2"
+          placeholder="Введите телефон"
+        />
+      </div>
+    </div>
+
+    <div class="mt-6 flex space-x-3">
+      <button
+        @click="saveUserInfo()"
+        :disabled="isSubmitting"
+        class="flex-1 rounded-lg bg-red-700 px-4 py-2 font-medium text-white hover:bg-red-800 disabled:opacity-75"
+      >
+        <div x-show="isSubmitting" class="flex items-center justify-center">
+          <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
+          Сохранение...
+        </div>
+        <span x-show="!isSubmitting">Сохранить</span>
+      </button>
+      <button
+        @click="$store.app.modals.auth = false"
+        class="flex-1 rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-700 hover:bg-gray-300"
+      >
+        Отмена
+      </button>
+    </div>
+  </div>
+</div>

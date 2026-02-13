@@ -1,0 +1,201 @@
+<div
+  x-data="{
+    criteriaConfig: {
+      role: { title: 'Роль и контекст', icon: 'fa-user-circle' },
+      clarity: { title: 'Чёткость задачи', icon: 'fa-tasks' },
+      completeness: { title: 'Полнота данных', icon: 'fa-database' },
+      focus: { title: 'Сфокусированность', icon: 'fa-bullseye' },
+      structure: { title: 'Структура', icon: 'fa-sitemap' },
+      method: { title: 'Метод решения', icon: 'fa-cogs' },
+      format: { title: 'Формат ответа', icon: 'fa-file-alt' },
+    },
+  }"
+  class="mb-8 h-full rounded-xl border border-gray-200 bg-white p-8 shadow-lg"
+>
+  <div
+    class="py-24 text-center text-gray-500"
+    x-show="!$store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback"
+  >
+    <i class="fas fa-comment-alt mb-4 text-4xl"></i>
+    <p>Отправьте промпт, чтобы получить обратную связь</p>
+  </div>
+
+  <div
+    x-show="$store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback"
+  >
+    <div class="relative mb-4 overflow-hidden rounded-lg border-b-2 border-red-500">
+      <div class="mb-20">
+        <div class="flex justify-between pb-4 text-2xl font-bold">
+          <span>Общая оценка: </span>
+          <span>
+            <span class="font-bolder pl-1 text-3xl leading-tight">
+              <span
+                x-text="($store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback?.ai_grade || 0).toFixed(1)"
+                >0.0</span
+              >
+            </span>
+            <span
+              x-show="$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId > 1 && $store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback && $store.app.tasks[$store.app.currentTaskId]?.attempts[($store.app.tasks[$store.app.currentTaskId]?.currentAttemptId - 1)]?.feedback"
+              x-text="
+                (() => {
+                  const currentGrade = $store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback?.ai_grade || 0;
+                  const previousGrade = $store.app.tasks[$store.app.currentTaskId]?.attempts[($store.app.tasks[$store.app.currentTaskId]?.currentAttemptId - 1)]?.feedback?.ai_grade || 0;
+                  const diff = currentGrade - previousGrade;
+                  return (diff > 0 ? ' +' : ' ') + diff.toFixed(1);
+                })()
+              "
+              :class="{
+                'text-green-500': (() => {
+                  const currentGrade = $store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback?.ai_grade || 0;
+                  const previousGrade = $store.app.tasks[$store.app.currentTaskId]?.attempts[($store.app.tasks[$store.app.currentTaskId]?.currentAttemptId - 1)]?.feedback?.ai_grade || 0;
+                  return (currentGrade - previousGrade) > 0;
+                })(),
+                'text-red-500': (() => {
+                  const currentGrade = $store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback?.ai_grade || 0;
+                  const previousGrade = $store.app.tasks[$store.app.currentTaskId]?.attempts[($store.app.tasks[$store.app.currentTaskId]?.currentAttemptId - 1)]?.feedback?.ai_grade || 0;
+                  return (currentGrade - previousGrade) < 0;
+                })()
+              }"
+              class="text-xs leading-tight"
+            ></span>
+          </span>
+        </div>
+      </div>
+
+      <div class="absolute bottom-0 z-1 h-3/5 w-full shadow-lg">
+        <div
+          x-data="{
+            chartInstance: null,
+
+            init() {
+              this.$nextTick(() => {
+                const canvas = this.$el.querySelector('canvas');
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+
+                const options = {
+                  maintainAspectRatio: false,
+                  legend: { display: false },
+                  tooltips: { enabled: false },
+                  elements: { point: { radius: 0 } },
+                  scales: {
+                    xAxes: [{ gridLines: false, ticks: { display: false } }],
+                    yAxes: [{
+                      gridLines: false,
+                      ticks: {
+                        display: false,
+                        suggestedMin: 0,
+                        suggestedMax: 5
+                      }
+                    }]
+                  }
+                };
+
+                this.chartInstance = new Chart(ctx, {
+                  type: 'line',
+                  data: { labels: [], datasets: [] },
+                  options
+                });
+
+                this.update();
+              });
+            },
+
+            update() {
+              if (!this.chartInstance) return;
+
+              const feedback = $store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback;
+              if (!feedback?.ai_criteria) return;
+
+              const criteriaConfig = {
+                role: { title: 'Роль и контекст' },
+                clarity: { title: 'Чёткость задачи' },
+                completeness: { title: 'Полнота данных' },
+                focus: { title: 'Сфокусированность' },
+                structure: { title: 'Структура' },
+                method: { title: 'Метод решения' },
+                format: { title: 'Формат ответа' },
+              };
+
+              const labels = Object.keys(criteriaConfig).map(k => criteriaConfig[k].title);
+              const data = Object.keys(criteriaConfig).map(k => feedback.ai_criteria[k]?.score ?? 0);
+
+              this.chartInstance.data.labels = labels;
+              if (this.chartInstance.data.datasets.length === 0) {
+                this.chartInstance.data.datasets.push({
+                  backgroundColor: 'rgba(220, 38, 38, .1)',
+                  borderColor: 'transparent',
+                  borderWidth: 0,
+                  data
+                });
+              } else {
+                this.chartInstance.data.datasets[0].data = data;
+              }
+
+              this.chartInstance.update();
+            }
+          }"
+          x-init="init()"
+          x-effect="$store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback && update()"
+          class="h-full w-full"
+        >
+          <canvas height="100"></canvas>
+        </div>
+      </div>
+
+      <div class="absolute bottom-0 z-2 flex w-full justify-between text-sm text-red-600">
+        <i class="fas criterion-icon fa-user-circle p-2"></i>
+        <i class="fas criterion-icon fa-tasks p-2"></i>
+        <i class="fas criterion-icon fa-database p-2"></i>
+        <i class="fas criterion-icon fa-bullseye p-2"></i>
+        <i class="fas criterion-icon fa-sitemap p-2"></i>
+        <i class="fas criterion-icon fa-cogs p-2"></i>
+        <i class="fas criterion-icon fa-file-alt p-2"></i>
+      </div>
+    </div>
+
+    <!-- AI Feedback Comment -->
+    <div class="mb-6">
+      <div class="mb-4 rounded-lg border-b-2 border-gray-200 bg-gray-100 p-4">
+        <p
+          class="text-gray-700"
+          x-text="$store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback?.ai_comment || '—'"
+        ></p>
+      </div>
+    </div>
+
+    <!-- AI Feedback by Criterias-->
+    <div class="space-y-4">
+      <template x-for="(config, key) in criteriaConfig" :key="key">
+        <div class="criterion-item mb-2 rounded-lg border-b-2 border-gray-100 bg-gray-50 p-4 text-gray-700">
+          <div class="flex items-start gap-4">
+            <i class="fas criterion-icon w-5 text-xl" :class="config.icon"></i>
+            <div class="w-full">
+              <div class="flex justify-between">
+                <h5 class="criterion-title text-lg font-medium" x-text="config.title"></h5>
+                <div class="criterion-stars ml-1 flex">
+                  <template x-for="i in [0,1,2,3,4]" :key="i">
+                    <i
+                      class="ml-1"
+                      :class="(() => {
+                           const s = $store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback?.ai_criteria?.[key]?.score || 0;
+                           if (i < Math.floor(s)) return 'fas fa-star text-yellow-500';
+                           if (i === Math.floor(s) && s % 1 >= 0.5) return 'fas fa-star-half-alt text-yellow-500';
+                           return 'far fa-star text-gray-300';
+                         })()"
+                    ></i>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p
+            class="criterion-comment pt-2 text-sm"
+            x-text="$store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback?.ai_criteria?.[key]?.comment || 'Нет комментария'"
+          ></p>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>

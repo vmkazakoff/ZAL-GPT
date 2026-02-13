@@ -1,0 +1,26 @@
+<header class="mb-4 bg-white shadow-lg">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <div class="flex h-16 items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-3xl font-bold" style="font-family: &quot;Oks Free&quot;, sans-serif">
+          <span class="text-red-600">ЗАЛ</span>
+          <span class="text-black">- GPT</span>
+        </span>
+      </div>
+      <nav class="flex items-center space-x-4">
+        <button
+          class="flex h-10 w-10 items-center justify-center rounded-full font-medium text-slate-400 transition-colors hover:bg-gray-100 hover:text-slate-600"
+          @click="$store.app.modals.qr = true"
+        >
+          <i class="fas fa-qrcode"></i>
+        </button>
+        <button
+          class="flex h-10 w-10 items-center justify-center rounded-full font-medium text-slate-400 transition-colors hover:bg-gray-100 hover:text-slate-600"
+          @click="$store.app.modals.auth = true"
+        >
+          <i class="fas fa-user"></i>
+        </button>
+      </nav>
+    </div>
+  </div>
+</header>

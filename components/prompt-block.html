@@ -1,0 +1,181 @@
+<div
+  x-data="{
+    isSubmitting: false,
+  }"
+  class="mb-8 h-full rounded-xl border border-gray-200 bg-white p-8 shadow-lg"
+>
+  <h2
+    x-text="$store.app.tasks[$store.app.currentTaskId]?.title || 'Загрузка...'"
+    class="mb-4 text-2xl font-bold text-gray-800"
+  ></h2>
+  <div>
+    <div
+      class="prose mb-6 max-w-none text-gray-600"
+      x-html="$store.app.tasks[$store.app.currentTaskId]?.description || 'Дождитесь загрузки задания...'"
+    ></div>
+
+    <!-- Prompt Input Section -->
+    <div class="mb-6">
+      <label class="font-small mb-2 block text-xs text-gray-400"> Ваш промпт: </label>
+      <textarea
+        :disabled="$store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback"
+        :value="($store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.user_prompt) || ''"
+        @input="($store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]) ?
+                 $store.app.tasks[$store.app.currentTaskId].attempts[$store.app.tasks[$store.app.currentTaskId].currentAttemptId].user_prompt = $event.target.value : null"
+        rows="6"
+        class="w-full resize-none rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-slate-400"
+        placeholder="Введите ваш промпт здесь..."
+      ></textarea>
+    </div>
+
+    <!-- Buttons -->
+    <div class="flex items-center justify-between gap-2 pt-4">
+      <!-- Previous attempt button -->
+      <button
+        @click="
+          () => {
+            const currentTask = $store.app.tasks[$store.app.currentTaskId];
+            if (!currentTask) return;
+
+            const currentAttemptId = currentTask.currentAttemptId;
+            const minAttemptId = 1;
+
+            if (currentAttemptId > minAttemptId) {
+              $store.app.tasks[$store.app.currentTaskId].currentAttemptId = currentAttemptId - 1;
+            }
+          }
+        "
+        class="w-1/4 rounded-lg px-6 py-3 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+        :disabled="!$store.app.tasks[$store.app.currentTaskId] || ($store.app.tasks[$store.app.currentTaskId].currentAttemptId || 0) <= 1"
+      >
+        <i class="fas fa-chevron-left text-lg"></i>
+      </button>
+
+      <!-- Submit button -->
+      <button
+        @click="
+          () => {
+            const prompt = $store.app.tasks[$store.app.currentTaskId].attempts[$store.app.tasks[$store.app.currentTaskId].currentAttemptId].user_prompt?.trim();
+            if (!prompt) {
+              alert('Пожалуйста, введите промпт.');
+              return;
+            }
+
+            isSubmitting = true;
+            $store.app.submitPrompt(prompt)
+              .catch(error => alert('Ошибка при отправке промпта: ' + error.message))
+              .finally(() => isSubmitting = false);
+          }
+        "
+        class="flex w-1/2 items-center justify-center gap-2 rounded-lg bg-red-700 px-6 py-3 font-medium text-white transition-all duration-100 hover:bg-red-800 disabled:cursor-default disabled:bg-white disabled:text-gray-600 disabled:hover:bg-white"
+        :disabled="!(
+          $store.app.tasks[$store.app.currentTaskId]?.currentAttemptId !== -1 &&
+          $store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback === null &&
+          ($store.app.tasks[$store.app.currentTaskId]?.attemptsCount || 0) < ($store.app.tasks[$store.app.currentTaskId]?.allowedAttempts || 0)
+        ) || isSubmitting"
+      >
+        <div x-show="isSubmitting" class="mr-2">
+          <div class="h-5 w-5 animate-spin rounded-full border-b-2 border-red-700"></div>
+        </div>
+        <span
+          x-text="
+          $store.app.tasks[$store.app.currentTaskId]?.currentAttemptId !== -1 &&
+          ($store.app.tasks[$store.app.currentTaskId]?.attemptsCount || 0) < ($store.app.tasks[$store.app.currentTaskId]?.allowedAttempts || 0) &&
+          $store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback === null
+          ? 'Ответить' : 'Попытка'
+        "
+        ></span>
+        <span class="font-mono">
+          <span
+            x-text="$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId > 0 ? $store.app.tasks[$store.app.currentTaskId].currentAttemptId : '-'"
+            >-</span
+          >/<span x-text="$store.app.tasks[$store.app.currentTaskId]?.allowedAttempts || '-'"></span>
+        </span>
+      </button>
+
+      <!-- Next attempt button -->
+      <button
+        @click="
+          () => {
+            const currentTask = $store.app.tasks[$store.app.currentTaskId];
+            if (!currentTask) return;
+
+            const currentAttemptId = currentTask.currentAttemptId;
+            const totalAttempts = Object.keys(currentTask.attempts).length;
+            const totalAllowed = currentTask.allowedAttempts || 0;
+
+            // Only proceed if currentAttemptId is valid (> 0)
+            if (currentAttemptId > 0) {
+              if (currentAttemptId < totalAttempts) {
+                // Move to next existing attempt
+                $store.app.tasks[$store.app.currentTaskId].currentAttemptId = currentAttemptId + 1;
+              } else if (
+                currentAttemptId === totalAttempts &&
+                currentTask.attempts[totalAttempts]?.feedback !== null &&
+                totalAttempts < totalAllowed
+              ) {
+                // Create a new attempt if we've reached the limit of allowed attempts
+                const newAttemptId = totalAttempts + 1;
+                const newAttempt = {
+                  user_prompt: '',
+                  ai_response: '',
+                  status: 'unsent',
+                  feedback: null
+                };
+
+                // Update the task with the new attempt
+                $store.app.tasks[$store.app.currentTaskId] = {
+                  ...currentTask,
+                  attempts: {
+                    ...currentTask.attempts,
+                    [newAttemptId]: newAttempt
+                  }
+                };
+
+                // Switch to the new attempt
+                $store.app.tasks[$store.app.currentTaskId].currentAttemptId = newAttemptId;
+              }
+            } else if (totalAttempts > 0) {
+              // If currentAttemptId is invalid (e.g., -1), switch to the first attempt
+              const firstAttemptId = Math.min(...Object.keys(currentTask.attempts).map(Number));
+              $store.app.tasks[$store.app.currentTaskId].currentAttemptId = firstAttemptId;
+            }
+          }
+        "
+        class="w-1/4 rounded-lg bg-red-700 px-6 py-3 text-white transition-all duration-300 hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-white disabled:text-black disabled:opacity-50 disabled:hover:bg-white"
+        :disabled="!(
+          $store.app.tasks[$store.app.currentTaskId] &&
+          (
+            ($store.app.tasks[$store.app.currentTaskId].currentAttemptId || 0) > 0 &&  // Current attempt must be valid
+            (
+              ($store.app.tasks[$store.app.currentTaskId].currentAttemptId || 0) < Object.keys($store.app.tasks[$store.app.currentTaskId].attempts || {}).length ||
+              (
+                ($store.app.tasks[$store.app.currentTaskId].currentAttemptId || 0) === Object.keys($store.app.tasks[$store.app.currentTaskId].attempts || {}).length &&
+                $store.app.tasks[$store.app.currentTaskId].attempts[$store.app.tasks[$store.app.currentTaskId].currentAttemptId]?.feedback !== null &&
+                Object.keys($store.app.tasks[$store.app.currentTaskId].attempts || {}).length < ($store.app.tasks[$store.app.currentTaskId].allowedAttempts || 0)
+              )
+            )
+          )
+        )"
+      >
+        <i class="fas fa-chevron-right text-lg"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- AI Response Block -->
+  <div
+    x-show="$store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback?.ai_response"
+    class="mt-8 border-t-1 border-gray-200 pt-8"
+  >
+    <div class="flex items-center justify-between">
+      <h3 class="text-xl font-bold text-gray-800">Ответ ИИ</h3>
+    </div>
+    <div id="responseContent" class="collapsible-content expanded">
+      <div
+        class="markdown-content mt-4 rounded-lg"
+        x-html="marked.parse($store.app.tasks[$store.app.currentTaskId]?.attempts[$store.app.tasks[$store.app.currentTaskId]?.currentAttemptId]?.feedback?.ai_response || '')"
+      ></div>
+    </div>
+  </div>
+</div>
