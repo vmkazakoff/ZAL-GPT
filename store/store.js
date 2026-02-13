@@ -112,15 +112,9 @@ document.addEventListener("alpine:init", () => {
         if (response.ok && data.success) {
           this.championshipData = data.championship;
           this.tasks = data.tasks;
-          
-          // Find the first uncompleted task
-          const firstUncompletedTaskId = Object.keys(this.tasks).find(
-            taskId => this.tasks[taskId].status !== 'completed'
-          );
-          
-          // Set currentTaskId to the first uncompleted task, or fallback to first task if all completed
-          this.currentTaskId = firstUncompletedTaskId || Object.keys(this.tasks)[0];
-          
+          // this.currentTaskId = Object.keys(this.tasks)[0]; // открыть по умолчанию первое задание
+          this.currentTaskId = Object.keys(this.tasks).at(-1); // открыть по умолчанию последнее задание
+          // а нужно открыть послед
           this.loadTaskData(this.currentTaskId);
           return;
         }

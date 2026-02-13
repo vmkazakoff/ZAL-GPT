@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MKRobots | Prompt Practice</title>
 
     <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
@@ -12,333 +12,101 @@
     <meta name="apple-mobile-web-app-title" content="Prompt Practice" />
     <link rel="manifest" href="favicon/site.webmanifest" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="styles/markdown.css">
-    <link rel="stylesheet" href="styles/styles.css">
-</head>
 
-<body class="bg-slate-100 min-h-screen">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="styles/markdown.css" />
+    <link rel="stylesheet" href="styles/styles.css" />
+  </head>
 
+  <body x-data="{}" class="min-h-screen bg-slate-100">
     <!-- Header -->
-    <header class="bg-white shadow-lg mb-4">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-2">
-                    <span class="text-3xl font-bold" style="font-family: 'Oks Free', sans-serif;">
-                        <span class="text-red-600">ЗАЛ</span>
-                        <span class="text-black">- GPT</span>
-                    </span>
-                </div>
-                <nav class="flex space-x-4 items-center">
-                    <button class="text-slate-400 hover:text-slate-600 hover:bg-gray-100 transition-colors w-10 h-10 flex items-center justify-center rounded-full font-medium" onclick="showQRCode()">
-                        <i class="fas fa-qrcode"></i>
-                    </button>
-                    <button class="text-slate-400 hover:text-slate-600 hover:bg-gray-100 transition-colors w-10 h-10 flex items-center justify-center rounded-full font-medium" onclick="showAuthModal()"> 
-                        <i class="fas fa-user"></i>
-                    </button>
-                </nav>
-            </div>
-        </div>
-    </header>
+    <div
+      x-data="{ html: '' }"
+      x-init="html = await (await fetch('/components/header.html')).text()"
+      x-html="html"
+    ></div>
 
-    <div class="container mx-auto px-4 py-8 max-w-6xl">
-        
-        <!-- Loading Indicator -->
-        <div id="loadingIndicator" class="hidden fixed flex inset-0 bg-black bg-opacity-50 items-center justify-center z-10 backdrop-blur-sm">
-            <div class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-xl shadow-lg z-10">
-                <div class="flex items-center">
-                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-red-700 mr-3"></div>
-                    <span class="text-gray-700">Загрузка...</span>
-                </div>
-            </div>
-        </div>
+    <!-- Loading Indicator -->
+    <div
+      x-data="{ html: '' }"
+      x-init="html = await (await fetch('/components/preloader.html')).text()"
+      x-html="html"
+      x-show="Object.values($store.app.loadingStates).some(state => state)"
+    ></div>
 
-        <!-- Championship Banner -->
+    <!-- Championship Block Component -->
+    <div
+      x-data="{ html: '' }"
+      x-init="html = await (await fetch('/components/championship-block.html')).text()"
+      x-html="html"
+    ></div>
 
-
-        <!-- Championship Tasks List -->
-        <div id="championshipTasksContainer" class="hidden mb-6">
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200">
-                <div id="championshipBanner" class="hidden bg-gradient-to-r from-red-700 to-red-600 text-white p-4 rounded-t-lg">
-                    <div class="max-w-6xl mx-auto flex items-center">
-                        <i class="fas fa-trophy text-4xl mr-5"></i>
-                        <div>
-                            <h2 id="championshipTitle" class="text-xl font-bold"></h2>
-                            <p id="championshipDescription" class="text-red-100"></p>
-                        </div>
-                    </div>
-                </div>
-                <div id="championshipTasksList" class="flex justify-between overflow-x-auto py-4 min-w-full">
-                    <!-- Championship tasks will be rendered here -->
-                </div>
-
-                <!-- Championship Task Template -->
-                <template id="championshipTaskTemplate">
-                    <div class="championship-task-item rounded-lg flex flex-col items-center cursor-pointer transition-all duration-200 mx-4 py-4 px-1 hover:bg-slate-100 group opacity-60 hover:opacity-100">
-                        <div class="flex">
-                            <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold">
-                                <i class="fas fa-circle task-icon absolute z-9 text-5xl text-red-600"></i>
-                                <span class="task-number text-sm relative inline-flex items-center justify-center w-full h-full text-white">
-                                </span>
-                            </div>
-                        </div>
-                        <div class="task-id text-xs font-normal transition-all duration-200 group-hover:font-bold group-hover:tracking-tight text-black mt-2 max-w-[80px] line-clamp-2"></div>
-                    </div>
-                </template>
-
-                <!-- Championship Task Separator Template -->
-                <template id="championshipTaskSeparatorTemplate">
-                    <div class="championship-task-separator flex-1">
-                        <div class="h-9 border-b-2 border-gray-300"></div>
-                    </div>
-                </template>
-
-            </div>
-        </div>
-
+    <!-- Tasks Content Container -->
+    <div class="container mx-auto my-8 max-w-6xl" x-show="$store.app.tasks[$store.app.currentTaskId]?.title">
+      <!-- Tasks Tab Content -->
+      <div class="tab-content">
         <!-- Left & Right Column -->
-        <div id="taskSection" class="hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                <!-- Left Column: Task Input and AI Response -->
-                <div class="flex flex-col">
-                    <div class="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-200">
-                        <h2 id="taskTitle" class="text-2xl font-bold text-gray-800 mb-4">
-                            Загрузка...
-                        </h2>
-                        <!-- Updated Prompt Content Block -->
-                        <div id="promptContent">
-                            <div id="taskDescription" class="prose max-w-none text-gray-600 mb-6">
-                                <p>Загрузка описания задания...</p>
-                            </div>
-
-                            <!-- Prompt Input Section -->
-                            <div class="mb-6">
-                                <label class="block text-xs font-small text-gray-400 mb-2">
-                                    Ваш промпт:
-                                </label>
-                                <textarea 
-                                    id="promptInput"
-                                    rows="6" 
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-slate-400 focus:border-transparent resize-none"
-                                    placeholder="Введите ваш промпт здесь..."></textarea>
-                            </div>
-
-                            <!-- Submit Button -->
-                            <div class="flex items-center justify-between gap-2 pt-4">
-                              <button id="prevAttemptBtn" class="py-3 px-6 rounded-lg w-1/4 hover:bg-gray-100 disabled:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed">
-                                  <i class="fas fa-chevron-left text-lg"></i>
-                              </button>
-                              <button 
-                                  id="submitBtn"
-                                  onclick="submitPrompt()"
-                                  class="bg-red-700 hover:bg-red-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:text-gray-700 disabled:bg-white disabled:hover:bg-white w-1/2 disabled:cursor-default"
-                              >
-                                  <!--<i class="fas fa-paper-plane mr-2"></i>-->
-                                  <span id="submitBtnText">Ответить</span> <span class="font-mono"><span id="currentAttemptDisplay">-</span>/<span id="totalAttemptsDisplay">-</span></span>
-                              </button>
-                              <button id="nextAttemptBtn" class="py-3 px-6 rounded-lg text-white w-1/4 bg-red-700 hover:bg-red-800 disabled:bg-white disabled:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed disabled:text-black ransition-all duration-300">
-                                  <i class="fas fa-chevron-right text-lg"></i>
-                              </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- AI Response Section -->
-                    <div id="aiResponseSection" class="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-200 flex-grow hidden">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-xl font-bold text-gray-800">
-                                Ответ ИИ
-                            </h3>
-                        </div>
-                        <div id="responseContent" class="collapsible-content expanded">
-                            <div id="aiResponseDisplay" class="mt-4 rounded-lg">
-                                <p class="text-gray-700">Загрузка ответа ИИ...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Feedback -->
-                <div class="flex flex-col">
-                    <div id="feedbackSection" class="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-200 h-full">
-
-                        <div id="feedbackPlaceholder" class="text-center py-24 text-gray-500">
-                            <i class="fas fa-comment-alt text-4xl mb-4"></i>
-                            <p>Отправьте промпт, чтобы получить обратную связь</p>
-                        </div>
-
-                        <div id="feedbackContent" class="hidden">
-
-                            <div id="finalGradeSection" class="mb-4 relative rounded-lg overflow-hidden hidden border-b-2 border-red-500">
-
-                                  <div class="mb-20">
-                                    <div class="pb-4 text-2xl font-bold flex justify-between">
-                                      <span>Общая оценка: </span>
-                                      <span>
-                                        <span class="pl-1 text-3xl font-bolder leading-tight">
-                                            <span id="finalGradeDisplay">0.0</span>
-                                        </span>
-                                        <span id="gradeDiffDisplay" class="text-xs text-green-500 leading-tight"></span>
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  <div class="absolute w-full h-3/5 bottom-0 z-1 shadow-lg">
-                                    <canvas id="chart" height="100"></canvas>
-                                  </div>
-
-                                  <div class="absolute w-full bottom-0 flex justify-between text-red-600 z-2 text-sm">
-                                    <i class="fas criterion-icon p-2 fa-user-circle"></i>
-                                    <i class="fas criterion-icon p-2 fa-tasks"></i>
-                                    <i class="fas criterion-icon p-2 fa-database"></i>
-                                    <i class="fas criterion-icon p-2 fa-bullseye"></i>
-                                    <i class="fas criterion-icon p-2 fa-sitemap"></i>
-                                    <i class="fas criterion-icon p-2 fa-cogs"></i>
-                                    <i class="fas criterion-icon p-2 fa-file-alt"></i>
-                                  </div>
-
-                            </div>
-
-
-                            <!-- AI Feedback Comment -->
-                            <div class="mb-6">
-                                <div id="aiCommentDisplay" class="bg-gray-100 p-4 mb-4 border-b-2 border-grey-500 rounded-lg">
-                                    <p class="text-gray-700">Загрузка ответа ИИ...</p>
-                                </div>
-                            </div>
-
-                            <!-- AI Feedback by Criterias-->
-                            <div id="aiFeedbackDisplay" class="space-y-4"></div>
-                            <template id="criterionTemplate">
-                              <div class="criterion-item text-gray-700 p-4 mb-2 bg-gray-50 border-b-2 border-grey-500 rounded-lg">
-                                <div class="flex gap-4 items-start">
-                                  <i class="fas criterion-icon text-xl w-5"></i>
-                                  <div class="w-full">
-                                      <div class="flex justify-between">
-                                        <h5 class="font-medium text-lg criterion-title">Заголовок</h5>
-                                        <div class="criterion-stars flex ml-1"></div>
-                                      </div>
-                                  </div>
-                                </div>
-                                <p class="text-sm pt-2 criterion-comment">Комментарий...</p>
-                              </div>
-                            </template>
-
-                    </div>
-                </div>
-
+        <div>
+          <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <!-- Left Column: Task Input and AI Response -->
+            <div class="flex flex-col">
+              <!-- Prompt Content Block -->
+              <div
+                x-data="{html: ''}"
+                x-init="html = await (await fetch('/components/prompt-block.html')).text()"
+                x-html="html"
+                class="h-full"
+              ></div>
             </div>
-        </div>
 
-        <!-- Error Display Section -->
-        <div id="errorSection" class="hidden text-center py-12">
-            <i class="fas fa-exclamation-triangle text-5xl text-yellow-500 mb-4"></i>
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Проверьте ссылку</h2>
-            <p class="text-lg text-gray-600 max-w-md mx-auto">
-                Кажется, в ссылке отсутствует идентификатор задания. Пожалуйста, используйте правильную ссылку.
-            </p>
-            <p id="errorDetails" class="text-gray-500 mt-2"></p>
-        </div>
-
-        <!-- Auth Modal -->
-        <div id="authModal" class="fixed flex inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 backdrop-blur-sm" onclick="closeAuthModal()">
-            <div class="bg-white rounded-xl max-w-md w-full p-6" onclick="event.stopPropagation()">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-gray-800">Представьтесь</h3>
-                    <button onclick="closeAuthModal()" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Имя *</label>
-                        <input id="inputName" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Введите ваше имя">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Организация</label>
-                        <input id="inputOrg" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Введите организацию">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input id="inputEmail" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Введите email">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
-                        <input id="inputPhone" type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Введите телефон">
-                    </div>
-                </div>
-                
-                <div class="mt-6 flex space-x-3">
-                    <button id="saveUserBtn" onclick="saveUserInfo()" class="flex-1 bg-red-700 hover:bg-red-800 text-white py-2 px-4 rounded-lg font-medium">
-                        Сохранить
-                    </button>
-                    <button onclick="closeAuthModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium">
-                        Отмена
-                    </button>
-                </div>
+            <!-- Right Column: Feedback -->
+            <div class="flex flex-col">
+              <div
+                x-data="{html: ''}"
+                x-init="html = await (await fetch('/components/feedback-block.html')).text()"
+                x-html="html"
+                class="h-full"
+              ></div>
             </div>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <!-- QR Code Modal -->
-        <div id="qrModal" class="fixed flex inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 backdrop-blur-sm" onclick="closeQRModal()">
-            <div class="bg-white rounded-xl max-w-lg w-full p-6 text-center" onclick="event.stopPropagation()">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">QR-код для входа</h3>
-                
-                <!-- Tabs for switching -->
-                <div class="flex mb-4 border-b border-gray-200">
-                    <button 
-                        id="tabGeneral" 
-                        class="flex-1 py-2 px-4 text-sm font-medium border-b-2 border-transparent hover:text-gray-600"
-                        onclick="switchQRMode('general')"
-                    >
-                        Общий QR
-                    </button>
-                    <button 
-                        id="tabPersonal" 
-                        class="flex-1 py-2 px-4 text-sm font-medium border-b-2 border-transparent hover:text-gray-600"
-                        onclick="switchQRMode('personal')"
-                    >
-                        Персональный QR
-                    </button>
-                </div>
+    <!-- Error Display Section -->
+    <div class="py-12 text-center" x-show="!($store.app.currentTaskId || $store.app.championshipId)">
+      <i class="fas fa-exclamation-triangle mb-4 text-5xl text-yellow-500"></i>
+      <h2 class="mb-4 text-2xl font-bold text-gray-800">Проверьте ссылку</h2>
+      <p class="mx-auto max-w-md text-lg text-gray-600">
+        Кажется, в ссылке отсутствует идентификатор задания или чемпионата. Пожалуйста, используйте правильную ссылку.
+      </p>
+      <p id="errorDetails" class="mt-2 text-gray-500"></p>
+    </div>
 
-                <div id="qrcodeContainer" class="bg-slate-100 p-4 rounded-lg mb-4 mx-auto w-fit">
-                    <div id="qrcode" class="bg-slate-100">
-                        <!-- QR Code will be generated here -->
-                    </div>
-                </div>
-                
-                <p class="text-sm text-gray-600 mb-2" id="qrDescription">
-                    Отсканируйте QR-код с другого устройства
-                </p>
-                
-                <div id="linkSection" class="hidden mb-4 p-3 bg-gray-50 rounded-lg break-all">
-                    <p class="text-xs text-gray-600 mb-1">Или скопируйте ссылку:</p>
-                    <p id="qrLinkDisplay" class="text-sm font-mono text-gray-800"></p>
-                </div>
-                
-                <button 
-                    id="copyButton"
-                    onclick="copyQRLink()"
-                    class="w-full bg-red-700 hover:bg-red-800 text-white py-2 px-4 rounded-lg font-medium mb-3 hidden transition-all"
-                >
-                    <i class="fas fa-copy mr-2"></i> Копировать ссылку
-                </button>
-                
-                <button onclick="closeQRModal()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium">
-                    Закрыть
-                </button>
-            </div>
-        </div>
+    <!-- Auth Modal -->
 
-        <script src="scripts/app.js"></script>
-        <script src="scripts/chart.js"></script>
+    <!-- QR Modal Component -->
+    <div
+      x-data="{html: ''}"
+      x-show="$store.app.modals.qr"
+      x-init="html = await (await fetch('/components/qr-modal.html')).text()"
+      x-html="html"
+    ></div>
 
-</body>
+    <!-- Auth Modal Component -->
+    <div
+      x-data="{html: ''}"
+      x-show="$store.app.modals.auth"
+      x-init="html = await (await fetch('/components/auth-modal.html')).text()"
+      x-html="html"
+    ></div>
+
+    <script src="store/store.js"></script>
+  </body>
 </html>
