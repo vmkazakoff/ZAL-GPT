@@ -110,6 +110,8 @@ document.addEventListener("alpine:init", () => {
         const data = await response.json();
 
         if (response.ok && data.success) {
+          this.championshipData = data.championship;
+          this.tasks = data.tasks;
           const firstUncompletedTaskId = Object.keys(this.tasks).find(
             (taskId) => this.tasks[taskId].status !== "completed",
           );
