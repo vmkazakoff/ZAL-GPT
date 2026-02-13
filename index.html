@@ -26,16 +26,12 @@
 
   <body x-data="{}" class="min-h-screen bg-slate-100">
     <!-- Header -->
-    <div
-      x-data="{ html: '' }"
-      x-init="html = await (await fetch('/components/header.html')).text()"
-      x-html="html"
-    ></div>
+    <div x-data="{ html: '' }" x-init="html = await (await fetch('components/header.html')).text()" x-html="html"></div>
 
     <!-- Loading Indicator -->
     <div
       x-data="{ html: '' }"
-      x-init="html = await (await fetch('/components/preloader.html')).text()"
+      x-init="html = await (await fetch('components/preloader.html')).text()"
       x-html="html"
       x-show="Object.values($store.app.loadingStates).some(state => state)"
     ></div>
@@ -43,7 +39,7 @@
     <!-- Championship Block Component -->
     <div
       x-data="{ html: '' }"
-      x-init="html = await (await fetch('/components/championship-block.html')).text()"
+      x-init="html = await (await fetch('components/championship-block.html')).text()"
       x-html="html"
     ></div>
 
@@ -59,7 +55,7 @@
               <!-- Prompt Content Block -->
               <div
                 x-data="{html: ''}"
-                x-init="html = await (await fetch('/components/prompt-block.html')).text()"
+                x-init="html = await (await fetch('components/prompt-block.html')).text()"
                 x-html="html"
                 class="h-full"
               ></div>
@@ -69,7 +65,7 @@
             <div class="flex flex-col">
               <div
                 x-data="{html: ''}"
-                x-init="html = await (await fetch('/components/feedback-block.html')).text()"
+                x-init="html = await (await fetch('components/feedback-block.html')).text()"
                 x-html="html"
                 class="h-full"
               ></div>
@@ -95,7 +91,7 @@
     <div
       x-data="{html: ''}"
       x-show="$store.app.modals.qr"
-      x-init="html = await (await fetch('/components/qr-modal.html')).text()"
+      x-init="html = await (await fetch('components/qr-modal.html')).text()"
       x-html="html"
     ></div>
 
@@ -103,7 +99,7 @@
     <div
       x-data="{html: ''}"
       x-show="$store.app.modals.auth"
-      x-init="html = await (await fetch('/components/auth-modal.html')).text()"
+      x-init="html = await (await fetch('components/auth-modal.html')).text()"
       x-html="html"
     ></div>
 
