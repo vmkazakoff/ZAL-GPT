@@ -54,9 +54,21 @@ document.addEventListener("alpine:init", () => {
       team: false,
     },
 
+    // Состояние вкладок
+    activeTab: "tasks",
+
     // Данные о командах
     availableTeams: [], // Массив доступных команд для текущего чемпионата, структура: { id: "string", name: "string" }
     currentTeam: { id: "", name: "" }, // Объект с информацией о текущей команде пользователя в текущем чемпионате, структура: { id: "string", name: "string" } или null если нет команды
+
+    // Данные для рейтингов и дашборда
+    exerciseRatingByTeams: [], // Массив рейтинга команд по текущему заданию, структура: { rank: "number", name: "string", score: "number" }
+    dashboardStatsByTeams: {}, // Объект статистики выполнения заданий командами, структура: { taskId: { completedTeamsCount: "number" } }
+    championshipRatingByTeams: [], // Массив общего рейтинга команд по чемпионату, структура: { rank: "number", name: "string", completedTasks: "number", totalScore: "number" }
+
+    // Индикаторы загрузки
+    loadingExerciseRating: false,
+    loadingDashboardData: false,
 
     init() {
       // Initialize from URL parameters
@@ -91,18 +103,124 @@ document.addEventListener("alpine:init", () => {
       if (this.currentTaskId) {
         this.loadTaskData(this.currentTaskId);
       }
+
+      // Initialize mock data for ratings and dashboard (for testing purposes)
+      this.initializeMockData();
     },
 
     async loadUserInfo() {
+      const response = await fetch(`${this.BACKEND_URL}?action=getUserInfo&user=${encodeURIComponent(this.userId)}`);
+      const data = await response.json();
+      if (response.ok && data.success) {
+        this.userInfo = data;
+      }
+    },
+
+    // Initialize mock data for testing (only if no real data is expected)
+    initializeMockData() {
+      // Only initialize mock data if we're not expecting to load real data later
+      // This can be used for testing without backend connection
+      if (!this.championshipId) {
+        // Mock data for exercise rating by teams
+        this.exerciseRatingByTeams = [
+          { rank: 1, name: "Компания A", score: 9.8 },
+          { rank: 2, name: "Компания B", score: 9.5 },
+          { rank: 3, name: "Компания C", score: 9.2 },
+          { rank: 4, name: "Компания A", score: 8.9 },
+          { rank: 5, name: "Компания D", score: 8.7 },
+        ];
+
+        // Mock data for dashboard stats by teams
+        this.dashboardStatsByTeams = {
+          demo1: { completedTeamsCount: 5 },
+          demo2: { completedTeamsCount: 3 },
+          demo3: { completedTeamsCount: 7 },
+          demo4: { completedTeamsCount: 5 },
+          demo5: { completedTeamsCount: 3 },
+        };
+
+        // Mock data for championship rating by teams
+        this.championshipRatingByTeams = [
+          { rank: 1, name: "Компания A", completedTasks: 12, totalScore: 1112.3 },
+          { rank: 2, name: "Компания B", completedTasks: 12, totalScore: 109.7 },
+          { rank: 3, name: "Компания C", completedTasks: 12, totalScore: 107.2 },
+          { rank: 4, name: "Компания A", completedTasks: 11, totalScore: 98.5 },
+          { rank: 5, name: "Компания D", completedTasks: 10, totalScore: 89.2 },
+          { rank: 6, name: "Компания E", completedTasks: 9, totalScore: 82.1 },
+          { rank: 7, name: "Компания F", completedTasks: 8, totalScore: 76.8 },
+        ];
+      }
+    },
+
+    // Load exercise rating by teams for the current task
+    async loadExerciseRatingByTeams(taskId) {
+      if (!this.championshipId || !taskId) return;
+
+      this.loadingExerciseRating = true;
+
+      console.log("Calling getExerciseRatingByTeams with championship:", this.championshipId, "and task:", taskId);
+      const url = `${this.BACKEND_URL}?action=getExerciseRatingByTeams&championship=${encodeURIComponent(this.championshipId)}&practice=${encodeURIComponent(taskId)}`;
+      console.log("Request URL:", url);
+
       try {
-        const response = await fetch(`${this.BACKEND_URL}?action=getUserInfo&user=${encodeURIComponent(this.userId)}`);
+        const response = await fetch(url);
         const data = await response.json();
+
         if (response.ok && data.success) {
-          this.userInfo = data;
+          console.log("Raw data:", data);
+          console.log("Object.keys(data):", Object.keys(data));
+          console.log(
+            "Keys that pass filter:",
+            Object.keys(data).filter((key) => !isNaN(key)),
+          );
+
+          // Extract the ratings from the response (since spread operator flattens arrays into indexed properties)
+          this.exerciseRatingByTeams = Object.keys(data)
+            .filter((key) => !isNaN(key)) // Only numeric keys (from array elements)
+            .map((key) => data[key])
+            .sort((a, b) => a.rank - b.rank); // Sort by rank
+
+          console.log("Final exerciseRatingByTeams:", this.exerciseRatingByTeams);
+        } else {
+          console.error("Error loading exercise rating by teams:", data.error);
+          // Fallback to empty array
+          this.exerciseRatingByTeams = [];
         }
       } catch (error) {
-        console.error("Network error loading user info:", error);
-        this.userInfo = { name: "", company: "", email: "", phone: "" };
+        console.error("Network error loading exercise rating by teams:", error);
+        this.exerciseRatingByTeams = [];
+      } finally {
+        this.loadingExerciseRating = false;
+      }
+    },
+
+    // Load championship dashboard data (overall ratings and task stats)
+    async loadChampionshipDashboardData() {
+      if (!this.championshipId) return;
+
+      this.loadingDashboardData = true;
+
+      try {
+        const response = await fetch(
+          `${this.BACKEND_URL}?action=getChampionshipDashboardData&championship=${encodeURIComponent(this.championshipId)}`,
+        );
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          this.championshipRatingByTeams = data.championshipRatingByTeams || [];
+          this.dashboardStatsByTeams = data.dashboardStatsByTeams || {};
+        } else {
+          console.error("Error loading championship dashboard data:", data.error);
+          // Fallback to empty values
+          this.championshipRatingByTeams = [];
+          this.dashboardStatsByTeams = {};
+        }
+      } catch (error) {
+        console.error("Network error loading championship dashboard data:", error);
+        this.championshipRatingByTeams = [];
+        this.dashboardStatsByTeams = {};
+      } finally {
+        this.loadingDashboardData = false;
       }
     },
 
@@ -128,6 +246,7 @@ document.addEventListener("alpine:init", () => {
           if (this.mode === "championship") {
             await this.loadCurrentTeam();
             await this.loadAvailableTeams();
+            // Don't load dashboard data initially - load on demand
           }
 
           return;
@@ -215,6 +334,8 @@ document.addEventListener("alpine:init", () => {
           if (!this.currentTaskId) {
             this.currentTaskId = taskId;
           }
+
+          // Don't load exercise rating here - load on demand when needed
         } else {
           console.error("Error loading task:", data.error);
         }
@@ -450,6 +571,6 @@ document.addEventListener("alpine:init", () => {
         console.error("Network error renaming team:", error);
         throw error;
       }
-    }
+    },
   });
 });

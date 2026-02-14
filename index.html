@@ -41,10 +41,14 @@
       x-data="{ html: '' }"
       x-init="html = await (await fetch('components/championship-block.html')).text()"
       x-html="html"
+      class="container mx-auto my-8 max-w-6xl px-1 xl:px-0"
     ></div>
 
     <!-- Tasks Content Container -->
-    <div class="container mx-auto my-8 max-w-6xl" x-show="$store.app.tasks[$store.app.currentTaskId]?.title">
+    <div
+      class="container mx-auto my-8 max-w-6xl px-1 xl:px-0"
+      x-show="$store.app.tasks[$store.app.currentTaskId]?.title && $store.app.activeTab === 'tasks'"
+    >
       <!-- Tasks Tab Content -->
       <div class="tab-content">
         <!-- Left & Right Column -->
