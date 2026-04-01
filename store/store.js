@@ -54,6 +54,9 @@ document.addEventListener("alpine:init", () => {
       team: false,
     },
 
+    // Глобальный флаг: идёт ли отправка промпта
+    isSubmitting: false,
+
     // Состояние вкладок
     activeTab: "tasks",
 
@@ -347,6 +350,8 @@ document.addEventListener("alpine:init", () => {
     },
 
     async submitPrompt(prompt) {
+      this.isSubmitting = true;
+      
       try {
         const response = await fetch(this.BACKEND_URL, {
           method: "POST",
@@ -393,6 +398,8 @@ document.addEventListener("alpine:init", () => {
       } catch (error) {
         console.error("Network error:", error);
         throw error;
+      } finally {
+        this.isSubmitting = false;
       }
     },
 
